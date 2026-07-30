@@ -14,6 +14,6 @@
       "@shared": ["../shared/src/index.ts"]
     }
   },
-  "include": ["src", "prisma", "../shared/src"],
+  "include": ["src", "prisma"],
   "exclude": ["dist", "node_modules"]
 }
