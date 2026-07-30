@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
 
 import { SITE } from '@/config/site';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,9 +21,11 @@ export function HomePage() {
             <CardTitle>Ready to build</CardTitle>
             <CardDescription>
               This is the fullstack starter. Edit{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">client/src/pages/HomePage.tsx</code>{' '}
-              to replace this page, or hand the brief to founding.dev and let the agent
-              rewrite everything.
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                client/src/pages/HomePage.tsx
+              </code>{' '}
+              to replace this page, or hand the brief to founding.dev and let the agent rewrite
+              everything.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -30,6 +33,13 @@ export function HomePage() {
               <li>Vite dev server: http://localhost:5173</li>
               <li>Express API: http://localhost:3001/api/health</li>
               <li>Public entrypoint (via nginx): http://localhost:8888</li>
+              <li>
+                Reference CRUD vertical:{' '}
+                <Link to="/tasks" className="text-primary underline-offset-4 hover:underline">
+                  /tasks
+                </Link>{' '}
+                — copy that shape for every new resource.
+              </li>
             </ul>
           </CardContent>
         </Card>

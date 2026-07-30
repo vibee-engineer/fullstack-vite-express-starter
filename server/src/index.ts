@@ -1,16 +1,21 @@
 import { createApp } from './app';
-import { env, isPostgres, isMongo } from './env';
+import { env, isPostgres, isMongo, skipDb } from './env';
 import { logger } from './logger';
 
 /**
  * Boot sequence:
  *   1. Validate env (side effect of importing env.ts).
- *   2. Connect DB (Prisma or Mongo, whichever is configured).
+ *   2. Connect DB (Prisma or Mongo, whichever is configured) — unless SKIP_DB.
  *   3. app.listen().
  *   4. Wire graceful shutdown on SIGTERM/SIGINT.
  */
 async function main() {
-  if (isPostgres) {
+  if (skipDb) {
+    logger.warn(
+      'SKIP_DB is set — booting without a database. Routes fall back to the ' +
+        'in-memory repository; every write is lost on restart. Never use this in production.',
+    );
+  } else if (isPostgres) {
     const { prisma } = await import('./db/prisma');
     await prisma.$connect();
     logger.info('postgres connected');

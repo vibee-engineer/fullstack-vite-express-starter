@@ -8,9 +8,15 @@
  *
  * Update this file BEFORE writing route handlers or form components — the
  * schema is the contract; both sides derive from it.
+ *
+ * Resources big enough to own a file live in `./schemas/<resource>.ts` and are
+ * re-exported here so `@shared/schemas` stays the single import site. `Task`
+ * (see `./schemas/task.ts`) is the reference resource — copy its shape.
  */
 
 import { z } from 'zod';
+
+export * from './schemas/task';
 
 /** Example: user creation payload (POST body). */
 export const CreateUserSchema = z.object({

@@ -25,8 +25,18 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
       - name: Format check
         run: npm run lint
+
+      - name: Audit (high and above)
+        # Non-blocking: the two open advisories both need a breaking major bump
+        # (see README "Known issues"). Kept visible so a NEW high never lands
+        # unnoticed.
+        continue-on-error: true
+        run: npm audit --audit-level=high
 
       - name: Docker compose config
         run: docker compose config >/dev/null

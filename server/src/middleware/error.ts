@@ -19,7 +19,7 @@ export const errorMiddleware: ErrorRequestHandler = (err: HttpError, req, res, _
   const message =
     env.NODE_ENV === 'production' && status === 500
       ? 'Internal Server Error'
-      : err.message ?? 'Unknown error';
+      : (err.message ?? 'Unknown error');
 
   // Attach for pino-http.
   (req as unknown as { log?: { error: (obj: unknown, msg?: string) => void } }).log?.error(

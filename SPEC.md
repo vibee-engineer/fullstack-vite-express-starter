@@ -1,7 +1,7 @@
 # fullstack-vite-express-starter — SPEC
 
 **Target repo:** `github.com/vibee-engineer/fullstack-vite-express-starter`
-**Status:** PR-1 ships this SPEC only. PR-2 materializes every file below and creates the repo.
+**Status:** shipped. The file listing below is the original scaffold; the repo has since grown the `Task` reference vertical (`shared/src/schemas/task.ts`, `server/prisma/migrations/`, `server/mongoose/models/Task.ts`, `server/src/repositories/taskRepository.ts`, `server/src/routes/tasks.ts`, `client/src/api/tasks.ts`, `client/src/pages/TasksPage.tsx`) plus vitest suites for both workspaces. See the "reference pattern" table in README.md.
 **Stack:** React 19 + Vite 5 + TypeScript + Tailwind v4 + shadcn primitives (client), Express 4 + TypeScript + tsx watch + Prisma+Postgres OR Mongoose+Mongo + zod + pino (server), Docker Compose (orchestration), nginx (single-port terminator).
 
 ---
@@ -250,19 +250,19 @@ fullstack-vite-express-starter/
 
 **Client (`client/.env`):**
 
-| Var | Default | Purpose |
-|---|---|---|
-| `VITE_API_URL` | `/api` | Base URL for axios. `/api` = nginx-relative (works inside compose + Fly). Override to `https://api.<domain>` when deploying client + server separately. |
+| Var            | Default | Purpose                                                                                                                                                 |
+| -------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL` | `/api`  | Base URL for axios. `/api` = nginx-relative (works inside compose + Fly). Override to `https://api.<domain>` when deploying client + server separately. |
 
 **Server (`server/.env`):**
 
-| Var | Default | Purpose |
-|---|---|---|
-| `PORT` | `3001` | Express listen port (do not change; nginx maps to this). |
-| `NODE_ENV` | `development` | Standard. |
-| `DATABASE_URL` | `postgresql://postgres:postgres@db:5432/app?schema=public` | Prisma connection string. Postgres variant. |
-| `MONGO_URL` | `mongodb://db:27017/app` | Mongoose connection string. Mongo variant. |
-| `ALLOWED_ORIGIN` | `http://localhost:8888` | CORS allowed origin. |
+| Var              | Default                                                    | Purpose                                                  |
+| ---------------- | ---------------------------------------------------------- | -------------------------------------------------------- |
+| `PORT`           | `3001`                                                     | Express listen port (do not change; nginx maps to this). |
+| `NODE_ENV`       | `development`                                              | Standard.                                                |
+| `DATABASE_URL`   | `postgresql://postgres:postgres@db:5432/app?schema=public` | Prisma connection string. Postgres variant.              |
+| `MONGO_URL`      | `mongodb://db:27017/app`                                   | Mongoose connection string. Mongo variant.               |
+| `ALLOWED_ORIGIN` | `http://localhost:8888`                                    | CORS allowed origin.                                     |
 
 Additional secrets (Stripe / Postmark / OpenAI etc.) added by the agent when the brief needs them — always via `ask_user_questions` first, never a fake key.
 

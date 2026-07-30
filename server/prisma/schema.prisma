@@ -18,3 +18,25 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+/// Task lifecycle. Mirrors `TASK_STATUSES` in shared/src/schemas/task.ts —
+/// keep the two in sync; the zod enum is what validates the wire payload.
+enum TaskStatus {
+  todo
+  in_progress
+  done
+}
+
+/// THE REFERENCE MODEL. Task is the starter's one end-to-end vertical:
+/// schema (shared) → model (here + mongoose/models/Task.ts) → repository →
+/// routes → typed client → page. Copy this shape for every new resource.
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(todo)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([status, createdAt])
+}

@@ -3,13 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "description": "Founding.dev fullstack starter — React + Vite + Express + Prisma/Postgres (Mongo opt-in) + Docker Compose.",
-  "workspaces": ["shared", "client", "server"],
+  "workspaces": [
+    "shared",
+    "client",
+    "server"
+  ],
   "scripts": {
     "dev": "concurrently -k -n client,server -c cyan,magenta \"npm run dev -w client\" \"npm run dev -w server\"",
     "dev:docker": "docker compose up --build",
     "dev:mongo": "docker compose -f docker-compose.yml -f docker-compose.mongo.yml up --build",
     "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
     "typecheck": "npm run typecheck -w shared && npm run typecheck -w client && npm run typecheck -w server",
+    "test": "npm run test -w server && npm run test -w client",
+    "test:watch": "concurrently -k -n server,client -c magenta,cyan \"npm run test:watch -w server\" \"npm run test:watch -w client\"",
     "lint": "prettier --check .",
     "format": "prettier --write ."
   },

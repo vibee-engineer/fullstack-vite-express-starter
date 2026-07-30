@@ -24,6 +24,9 @@ export type NavLink = { to: string; label: string; external?: boolean };
 /** Primary navigation. First item is leftmost. */
 export const NAV: NavLink[] = [
   { to: '/', label: 'Home' },
+  // Reference CRUD vertical (client/src/pages/TasksPage.tsx). Remove this link
+  // and the route in App.tsx once the real resources land.
+  { to: '/tasks', label: 'Tasks' },
 ];
 
 /** Optional right-aligned CTA in the header. Set to `null` to hide. */
@@ -33,6 +36,9 @@ export const NAV_CTA: { label: string; to: string } | null = null;
 export const FOOTER_GROUPS: Array<{ heading: string; links: NavLink[] }> = [
   {
     heading: 'Product',
-    links: [{ to: '/', label: 'Home' }],
+    links: [
+      { to: '/', label: 'Home' },
+      { to: '/tasks', label: 'Tasks' },
+    ],
   },
 ];

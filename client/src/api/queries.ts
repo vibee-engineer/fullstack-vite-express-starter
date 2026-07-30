@@ -7,6 +7,9 @@ import { api } from './client';
  * Example query — documents the pattern. One `useXQuery()` hook per read
  * endpoint, colocated by resource as the app grows (split into
  * `queries/user.ts`, `queries/post.ts`, ...).
+ *
+ * For a real resource with a query-key factory, mutations, and cache
+ * invalidation, see `./tasks.ts` — that's the shape to copy.
  */
 export function useHealthQuery() {
   return useQuery({

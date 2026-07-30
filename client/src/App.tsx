@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { TasksPage } from '@/pages/TasksPage';
 
 /**
  * Route table. Add new routes here as children of the AppShell layout route.
@@ -24,6 +25,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/', element: <HomePage /> },
+      // Reference CRUD vertical — delete once you have real resources.
+      { path: '/tasks', element: <TasksPage /> },
       { path: '*', element: <NotFoundPage /> },
     ],
   },
