@@ -1,0 +1,39 @@
+# deps
+node_modules
+.pnp
+.pnp.js
+
+# builds
+dist
+build
+.next
+.turbo
+out
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.example.mongo
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# editors / OS
+.DS_Store
+.idea
+.vscode
+*.swp
+
+# prisma
+server/prisma/migrations/dev.db*
+server/prisma/*.db*
+
+# coverage / caches
+coverage
+.eslintcache
+.cache

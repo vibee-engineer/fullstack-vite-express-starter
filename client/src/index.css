@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import './tokens.css';
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  @apply bg-background text-foreground font-body;
+}
+
+/* Ensure Radix portals inherit theme tokens. */
+[data-radix-popper-content-wrapper] {
+  color: hsl(var(--foreground));
+}

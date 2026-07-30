@@ -1,0 +1,7 @@
+# Mongoose models live here (Mongo variant). Postgres variant uses Prisma;
+# leave this directory empty in that case.
+#
+# Example: src/models/User.ts
+#   import { Schema, model } from 'mongoose';
+#   const UserSchema = new Schema({ email: { type: String, required: true, unique: true }, name: String }, { timestamps: true });
+#   export const User = model('User', UserSchema);

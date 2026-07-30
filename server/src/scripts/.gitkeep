@@ -1,0 +1,2 @@
+# One-off scripts (backfills, admin operations) live here.
+# Run via `npx tsx server/src/scripts/<name>.ts`.

@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy root workspace manifests + workspace package.jsons so `npm ci` can
+# resolve the full graph. Source is bind-mounted at runtime.
+COPY package.json package-lock.json* ./
+COPY shared/package.json ./shared/
+COPY client/package.json ./client/
+COPY server/package.json ./server/
+
+RUN npm install --workspaces --include-workspace-root
+
+WORKDIR /app/client
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

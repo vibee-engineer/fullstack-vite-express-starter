@@ -1,0 +1,25 @@
+# Overlay: swap Postgres for Mongo.
+# Apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.mongo.yml up
+services:
+  db:
+    image: mongo:7
+    restart: unless-stopped
+    environment: {}
+    volumes:
+      - db-data:/data/db
+    ports:
+      - '27017:27017'
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  server:
+    environment:
+      NODE_ENV: development
+      PORT: '3001'
+      MONGO_URL: mongodb://db:27017/app
+      ALLOWED_ORIGIN: http://localhost:8888
+      DATABASE_URL: ''
