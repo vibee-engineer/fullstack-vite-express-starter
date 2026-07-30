@@ -15,7 +15,12 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // `mongoose/` is included alongside `src/` deliberately. It used to be
+    // src-only, which meant the Mongo model files were typechecked (they are in
+    // tsconfig's `include`) but never executed by a test. A CJS/ESM import bug
+    // in mongoose/models/Task.ts therefore broke every request on the Mongo
+    // stack while the suite stayed fully green.
+    include: ['src/**/*.test.ts', 'mongoose/**/*.test.ts'],
     env: {
       NODE_ENV: 'test',
       SKIP_DB: '1',

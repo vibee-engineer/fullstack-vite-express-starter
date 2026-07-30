@@ -6,6 +6,17 @@ RUN apk add --no-cache openssl
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# tsconfig.base.json is REQUIRED at runtime, not just for typechecking. Every
+# workspace tsconfig does `"extends": "../tsconfig.base.json"`, and the server
+# runs from TS source via tsx, which reads server/tsconfig.json to get the
+# `@shared/*` path aliases. If the extends target is missing, the whole
+# tsconfig fails to resolve, `paths` is silently lost, and every
+# `@shared/...` import falls through to bare-package resolution and dies with
+# `ERR_MODULE_NOT_FOUND: Cannot find package '@shared/schemas'` — the server
+# container boots, stays "running", and every /api/* request 502s through
+# nginx. The bind mounts below cover ./server and ./shared but NOT root-level
+# files, so this COPY is the only thing that puts it in the image.
+COPY tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 COPY server/package.json ./server/
@@ -16,4 +27,13 @@ RUN npx --workspace server prisma generate || true
 
 WORKDIR /app/server
 EXPOSE 3001
+
+# Installed to /usr/local/bin, NOT left at /app/server/docker-entrypoint.sh, so
+# the `./server:/app/server` bind mount in docker-compose.yml cannot shadow it.
+COPY server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# The entrypoint applies pending migrations, then execs this CMD. Without it the
+# API boots against an empty database and every data route 500s on P2021.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "run", "dev"]

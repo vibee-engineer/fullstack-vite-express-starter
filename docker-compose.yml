@@ -8,8 +8,13 @@ services:
       POSTGRES_DB: app
     volumes:
       - db-data:/var/lib/postgresql/data
-    ports:
-      - '5432:5432'
+    # No host port published on purpose. `server` reaches the db over the
+    # compose network as `db:5432`, and nginx:8888 is the only entry point the
+    # app needs. Publishing 5432 broke `docker compose up` outright for anyone
+    # with Postgres already listening on the host — a very common setup, and a
+    # confusing first-run failure ("port is already allocated") for a starter
+    # whose whole job is to boot cleanly. Inspect the db with:
+    #   docker compose exec db psql -U postgres -d app
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres -d app']
       interval: 5s

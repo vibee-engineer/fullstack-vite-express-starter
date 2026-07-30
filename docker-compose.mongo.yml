@@ -7,9 +7,28 @@ services:
     restart: unless-stopped
     environment: {}
     volumes:
-      - db-data:/data/db
-    ports:
-      - '27017:27017'
+      # A DEDICATED volume, not the base file's `db-data`. Sharing one volume
+      # name across the two stacks means switching between them points one
+      # engine at the other's on-disk format: Postgres finds a Mongo datadir,
+      # refuses to start, and the only symptom is
+      #   "dependency failed to start: container db-1 is unhealthy"
+      # with nothing about why. Separate volumes make the stacks independent, so
+      # you can switch back and forth and keep both datasets.
+      #
+      # Note: compose merges `volumes` additively, keyed by target path. Since
+      # the base file's target (/var/lib/postgresql/data) differs from this one,
+      # the mongo container ends up with BOTH mounts. The postgres one is inert
+      # on mongo:7 — nothing reads that path — and leaving it attached is what
+      # preserves the Postgres dataset untouched while Mongo is running. It is
+      # not a stray mount; removing it would need compose's `!reset` tag.
+      - db-data-mongo:/data/db
+    # No host port published — same reasoning as the Postgres base file, plus
+    # one that is specific to overlays: compose merges `ports` ADDITIVELY, it
+    # does not replace. So a base `5432:5432` here would not be overridden by
+    # `27017:27017`; the mongo container would try to publish BOTH, giving this
+    # path two independent chances to collide with a host service. Inspect with:
+    #   docker compose -f docker-compose.yml -f docker-compose.mongo.yml \
+    #     exec db mongosh app
     healthcheck:
       test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.runCommand({ ping: 1 }).ok']
       interval: 5s
@@ -23,3 +42,6 @@ services:
       MONGO_URL: mongodb://db:27017/app
       ALLOWED_ORIGIN: http://localhost:8888
       DATABASE_URL: ''
+
+volumes:
+  db-data-mongo:

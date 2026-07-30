@@ -8,7 +8,12 @@
  *
  *   import { User } from '../../mongoose/models/User';
  */
-import { Schema, model, models } from 'mongoose';
+// Default import + destructure — mongoose is CJS and this package is ESM, so
+// `import { models }` typechecks but throws at runtime. See the long comment in
+// ./Task.ts for the full explanation.
+import mongoose from 'mongoose';
+
+const { Schema, model, models } = mongoose;
 
 const UserSchema = new Schema(
   {

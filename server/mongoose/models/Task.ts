@@ -10,8 +10,20 @@
  * `shared/src/schemas/task.ts` — the repository maps both shapes onto the same
  * `Task` wire type, so a drift here shows up as a runtime shape mismatch.
  */
-import { Schema, model, models, type Model } from 'mongoose';
+// Default import, then destructure — NOT `import { Schema, model, models }`.
+// mongoose is CommonJS, and this package is ESM ("type": "module"). Node
+// synthesizes named exports for a CJS module only for the bindings
+// cjs-module-lexer can find by static analysis; `models` is assigned
+// dynamically onto the mongoose singleton, so it is not among them. A named
+// import typechecks fine (esModuleInterop) and then fails at runtime with
+//   The requested module 'mongoose' does not provide an export named 'models'
+// which surfaced as every /api/tasks request 500ing on the Mongo stack while
+// "mongo connected" was logged happily at boot.
+import mongoose, { type Model } from 'mongoose';
 import { TASK_STATUSES } from '@shared/schemas/task';
+
+const { Schema, model, models } = mongoose;
+
 import type { TaskStatus } from '@shared/types';
 
 /** Document fields. `_id`, `createdAt`, `updatedAt` are added by mongoose. */
