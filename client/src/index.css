@@ -1,8 +1,27 @@
+/* tokens.css MUST be imported FIRST — before the @tailwind directives.
+ *
+ * CSS requires @import to precede every other rule; an @import that appears
+ * after other statements is invalid and silently dropped. This file previously
+ * had the @import below the @tailwind lines, so tokens.css never loaded and
+ * every design token was undefined at runtime:
+ *
+ *   getComputedStyle(document.documentElement)
+ *     .getPropertyValue('--background')   ->  "" (empty)
+ *
+ * The Tailwind config maps colors to hsl(var(--background)) etc., so with the
+ * vars empty EVERY semantic color became an invalid hsl() and resolved to
+ * nothing. The app rendered as unstyled black-on-white with transparent
+ * surfaces, and the theme toggle looked broken — it correctly added `.dark` to
+ * <html> and persisted to localStorage, but there were no tokens for the class
+ * to switch, so nothing repainted. One line of ordering, and the entire design
+ * system was dead.
+ *
+ * Do not move this below the @tailwind directives again. */
+@import './tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './tokens.css';
 
 html {
   -webkit-font-smoothing: antialiased;
