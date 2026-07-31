@@ -40,6 +40,15 @@
   --ring: 222.2 84% 4.9%;
 
   --radius: 0.5rem;
+
+  /* Chart series. A dashboard with no chart library and no chart tokens is why
+   * generated apps rendered hand-rolled Progress bars for aggregate metrics.
+   * regenerate_tokens overwrites these to match the brand palette. */
+  --chart-1: 222.2 47.4% 11.2%;
+  --chart-2: 217.2 32.6% 45%;
+  --chart-3: 215 20.2% 65.1%;
+  --chart-4: 214.3 31.8% 78%;
+  --chart-5: 213 27% 88%;
 }
 
 .dark {
@@ -70,4 +79,10 @@
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 212.7 26.8% 83.9%;
+
+  --chart-1: 210 40% 98%;
+  --chart-2: 213 27% 84%;
+  --chart-3: 215 20.2% 65.1%;
+  --chart-4: 217.2 32.6% 47%;
+  --chart-5: 217.2 32.6% 35%;
 }
