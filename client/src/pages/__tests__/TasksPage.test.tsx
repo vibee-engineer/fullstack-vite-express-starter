@@ -27,7 +27,11 @@ const { apiMock } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@/api/client', () => ({ api: apiMock }));
+// Mock BOTH exported names. A vi.mock factory replaces the whole module, so a
+// factory that only supplies `api` reproduces the very failure the `apiClient`
+// alias exists to prevent — "does not provide an export named 'apiClient'" —
+// the moment a page is rewritten to use the other name.
+vi.mock('@/api/client', () => ({ api: apiMock, apiClient: apiMock }));
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), message: vi.fn() },
 }));

@@ -4,6 +4,20 @@
 > resource gets an entry here first, then routes/services/db, then the client
 > hook. This keeps client + server + shared zod schemas in lockstep.
 
+## The HTTP client
+
+`client/src/api/client.ts` exports the configured axios instance under two
+interchangeable names — `api` and `apiClient`:
+
+```ts
+import { apiClient } from '@/api/client'; // or: import { api } from '@/api/client'
+```
+
+Do not create a second axios instance. This one already carries the `/api`
+baseURL, `withCredentials`, and a response interceptor that normalizes errors
+to the `ApiError` shape (`{ message, code, status, details? }`) emitted by the
+server's error middleware.
+
 ## Endpoints
 
 <!-- METHOD path -> summary. Example:

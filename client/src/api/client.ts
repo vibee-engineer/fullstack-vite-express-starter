@@ -12,6 +12,28 @@ export const api = axios.create({
   timeout: 15_000,
 });
 
+/**
+ * `apiClient` is the same instance under the name agents reach for.
+ *
+ * This is not decoration. Two independent ATS builds (2026-08-03, tasks
+ * 6a7088f0c3deea3fdf49302f and 6a708f0076838d3b407b4ad9) each wrote
+ * `import { apiClient } from '@/api/client'`, and because only `api` was
+ * exported, Vite threw
+ *
+ *   "The requested module '/src/api/client.ts' does not provide an export
+ *    named 'apiClient'"
+ *
+ * at module-evaluation time. That is fatal in a way a normal bug is not: the
+ * entry module never evaluates, React never mounts, and the whole app is a
+ * white screen — with a fully working backend behind it. Both builds otherwise
+ * passed every gate and were recorded as completed.
+ *
+ * `apiClient` is the more guessable name (it says what it is), so exporting it
+ * as well removes an entire class of total-failure by making the guess right.
+ * Both names are the identical axios instance; use whichever reads better.
+ */
+export const apiClient = api;
+
 export type ApiError = {
   message: string;
   code?: string;
