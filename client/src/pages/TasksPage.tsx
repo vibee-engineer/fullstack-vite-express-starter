@@ -30,6 +30,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageHeader } from '@/components/ui/page-header';
+import { StatCard } from '@/components/ui/stat-card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -106,14 +108,44 @@ export function TasksPage() {
         <meta name="description" content="The starter's reference CRUD vertical." />
       </Helmet>
 
-      <div className="container max-w-3xl space-y-8 py-12">
-        <header className="space-y-2">
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
-            The reference CRUD vertical — shared zod schema, Express router, repository, typed
-            client hooks, and the four list states. Copy this shape for your own resources.
-          </p>
-        </header>
+      {/* App rhythm, not marketing rhythm: AppShell already supplies the page
+          gutters (px-4 / lg:px-6, py-6) and the scroll container, so a page adds
+          only its own vertical spacing. Do NOT wrap an app page in
+          `container max-w-3xl py-12` — that is a marketing measure and it makes
+          a dashboard read as a narrow column of cards in a sea of whitespace. */}
+      <div className="space-y-6">
+        <PageHeader
+          title="Tasks"
+          description="The reference CRUD vertical — shared zod schema, Express router, repository, typed client hooks, and the four list states. Copy this shape for your own resources."
+          action={
+            <Button size="sm" onClick={() => document.getElementById('title')?.focus()}>
+              <Plus aria-hidden className="size-4" />
+              New task
+            </Button>
+          }
+        />
+
+        {/* KPI row. A dashboard opens with the two-to-four numbers that answer
+            "how am I doing", then goes into detail — not straight into a chart.
+            Values use tabular-nums via StatCard so they do not jitter when they
+            change. */}
+        {tasks.isSuccess ? (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <StatCard label="Total" value={tasks.data.items.length} icon={ListChecks} hint="all tasks" />
+            <StatCard
+              label="Done"
+              value={tasks.data.items.filter((t) => t.status === 'done').length}
+              icon={Check}
+              hint="completed"
+            />
+            <StatCard
+              label="Open"
+              value={tasks.data.items.filter((t) => t.status !== 'done').length}
+              icon={Pencil}
+              hint="still to do"
+            />
+          </div>
+        ) : null}
 
         {/* --- create ------------------------------------------------------- */}
         <Card>
