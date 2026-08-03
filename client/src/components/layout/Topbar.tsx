@@ -22,11 +22,27 @@ export function Topbar({
   title,
   actions,
   account,
+  nav,
+  showMenuAtAllWidths = false,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   /** Account menu / avatar. Supply once auth exists. */
   account?: ReactNode;
+  /**
+   * Horizontal navigation, for the `topbar` archetype where there is no rail.
+   * AppShell passes <TopbarNav /> here; leave undefined for other archetypes.
+   */
+  nav?: ReactNode;
+  /**
+   * Keep the drawer trigger visible at every width, not just below md.
+   *
+   * The trigger is `md:hidden` because the desktop rail normally covers
+   * navigation above that breakpoint. In an archetype with NO rail, hiding it on
+   * desktop would strand every destination behind a button that does not exist —
+   * an app with unreachable routes.
+   */
+  showMenuAtAllWidths?: boolean;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -39,7 +55,7 @@ export function Topbar({
             type="button"
             variant="ghost"
             size="icon"
-            className="md:hidden"
+            className={showMenuAtAllWidths ? undefined : 'md:hidden'}
             aria-label="Open navigation"
           >
             <Menu aria-hidden className="size-4" />
@@ -54,7 +70,22 @@ export function Topbar({
         </SheetContent>
       </Sheet>
 
-      {title && <div className="truncate text-sm font-medium md:hidden">{title}</div>}
+      {/* With a rail, the title is redundant on desktop (the active nav item
+          already says where you are), so it shows only on mobile. Without a
+          rail there is no such cue, so it stays visible at every width. */}
+      {title && (
+        <div
+          className={
+            showMenuAtAllWidths
+              ? 'truncate text-sm font-medium'
+              : 'truncate text-sm font-medium md:hidden'
+          }
+        >
+          {title}
+        </div>
+      )}
+
+      {nav}
 
       <div className="ml-auto flex items-center gap-1">
         {actions}

@@ -41,6 +41,36 @@ export type NavSection = {
   items: NavItem[];
 };
 
+/**
+ * The four application shells AppShell can compose.
+ *
+ * Layout follows from information architecture, not from house style. Pick the
+ * one that fits THIS app; none of them is a downgrade.
+ *
+ *   sidebar  Persistent rail + topbar + scrolling main.
+ *            Many destinations, or nav that needs labelled groups.
+ *   topbar   Horizontal nav in the topbar, no rail, content clamped to 1280px.
+ *            A handful of destinations, where a rail is mostly empty space.
+ *   focused  Slim bar, no destinations listed, single centered 768px column.
+ *            One view, a wizard, or a flow where nav is a distraction.
+ *   canvas   Topbar + full-bleed main that does NOT scroll. The board, map or
+ *            editor inside owns the viewport and its own scrolling.
+ */
+export type LayoutArchetype = 'sidebar' | 'topbar' | 'focused' | 'canvas';
+
+/**
+ * This app's shell. AppShell reads it; change it here, never by editing the
+ * layout components.
+ *
+ * Choose by counting the destinations a signed-in user navigates between (the
+ * entries in NAV_SECTIONS), then sanity-check against the app's interaction
+ * model — a board or editor wants `canvas` regardless of destination count.
+ *
+ * A sidebar on a two-page app is the most common tell of a generated app: a
+ * 256px rail holding two links, next to content that had nowhere to go.
+ */
+export const LAYOUT: LayoutArchetype = 'sidebar';
+
 export const SITE = {
   /** Brand wordmark in the sidebar header. Keep it short — it sits in 256px. */
   name: 'App',
