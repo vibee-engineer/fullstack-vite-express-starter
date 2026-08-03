@@ -24,6 +24,10 @@ import { AppShell } from '../AppShell';
 
 vi.mock('@/config/site', () => ({
   LAYOUT: 'sidebar',
+  // Nav placement and content width are independent axes, so the mock must
+  // supply both. 'fluid' is the starter default: dense app UI uses the full
+  // width (Carbon's high-density model), and only prose/forms clamp.
+  CONTENT_WIDTH: 'fluid',
   SITE: { name: 'Test App', tagline: 't', url: '', ogImage: '', author: '' },
   NAV_SECTIONS: [
     {
@@ -35,10 +39,13 @@ vi.mock('@/config/site', () => ({
   ],
 }));
 
-const mount = (layout?: 'sidebar' | 'topbar' | 'focused' | 'canvas') =>
+const mount = (
+  layout?: 'sidebar' | 'topbar' | 'focused' | 'canvas',
+  width?: 'fluid' | 'clamped',
+) =>
   render(
     <MemoryRouter>
-      <AppShell layout={layout} title="Page">
+      <AppShell layout={layout} width={width} title="Page">
         <p>content</p>
       </AppShell>
     </MemoryRouter>,
@@ -64,7 +71,7 @@ describe('AppShell archetypes', () => {
     expect(main()!.className).toContain('overflow-y-auto');
   });
 
-  test('topbar: no rail, horizontal nav, content clamped', () => {
+  test('topbar: no rail, horizontal nav, width left to the policy', () => {
     mount('topbar');
     // The whole point: no 256px column holding two links.
     expect(rail()).toBeNull();
@@ -73,14 +80,40 @@ describe('AppShell archetypes', () => {
     // Every destination still reachable — nav parity with the rail it replaced.
     expect(nav!.textContent).toContain('Overview');
     expect(nav!.textContent).toContain('Things');
-    // Without a rail, unclamped text runs to unreadable measure on a wide screen.
+    // Width is NOT implied by nav placement: with the default 'fluid' policy a
+    // topbar app of wide data tables must stay full width. Clamping it here was
+    // the bug — it conflated two independent axes.
+    expect(document.querySelector('.max-w-7xl')).toBeNull();
+  });
+
+  test('width policy clamps independently of nav placement', () => {
+    mount('topbar', 'clamped');
     expect(document.querySelector('.max-w-7xl')).not.toBeNull();
+  });
+
+  test('a sidebar app can clamp a single route', () => {
+    // A settings form inside a dashboard should not run to 1600px.
+    mount('sidebar', 'clamped');
+    expect(rail()).not.toBeNull();
+    expect(document.querySelector('.max-w-7xl')).not.toBeNull();
+  });
+
+  test('canvas ignores a clamp — the surface owns the viewport', () => {
+    mount('canvas', 'clamped');
+    expect(document.querySelector('.max-w-7xl')).toBeNull();
+    expect(document.querySelector('.max-w-3xl')).toBeNull();
   });
 
   test('focused: no rail, no destination list, narrow column', () => {
     mount('focused');
     expect(rail()).toBeNull();
     expect(topbarNav()).toBeNull();
+    expect(document.querySelector('.max-w-3xl')).not.toBeNull();
+  });
+
+  test('focused clamps even when the policy says fluid', () => {
+    // A readable measure IS the archetype; 'fluid' cannot opt out of it.
+    mount('focused', 'fluid');
     expect(document.querySelector('.max-w-3xl')).not.toBeNull();
   });
 

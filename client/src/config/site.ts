@@ -71,6 +71,35 @@ export type LayoutArchetype = 'sidebar' | 'topbar' | 'focused' | 'canvas';
  */
 export const LAYOUT: LayoutArchetype = 'sidebar';
 
+/**
+ * Content width policy — INDEPENDENT of where navigation sits.
+ *
+ * These are two orthogonal axes and conflating them is a real bug: a topbar app
+ * full of wide data tables must NOT be clamped, and a settings page in a sidebar
+ * app should not run to 1600px.
+ *
+ *   fluid    Full available width. Data tables, board views, dashboards, any
+ *            resource index with many columns.
+ *   clamped  Centered with a readable measure. Forms, detail records, prose,
+ *            settings, wizards.
+ *
+ * Sources genuinely disagree on any single number, so do not treat one as
+ * canonical: Shopify Polaris caps a page at 998px, IBM Carbon caps its grid at
+ * 1584px but tells you to remove it for dense UI, and Atlassian never caps main
+ * at all. Carbon's "high-density interface model" is explicit that complex
+ * product interfaces and data dashboards "use the full width of the browser".
+ *
+ * For readable prose the defensible figure is measure, not pixels: WCAG 2.1
+ * SC 1.4.8 (Level AAA) says no more than 80 characters per line, and Baymard
+ * puts optimal body text at 50-75 characters. Tailwind's max-w-prose is 65ch.
+ *
+ * Set the app-wide default here; override per page with the `width` prop on
+ * PageShell where one view genuinely differs.
+ */
+export type ContentWidth = 'fluid' | 'clamped';
+
+export const CONTENT_WIDTH: ContentWidth = 'fluid';
+
 export const SITE = {
   /** Brand wordmark in the sidebar header. Keep it short — it sits in 256px. */
   name: 'App',

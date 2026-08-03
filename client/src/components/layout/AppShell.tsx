@@ -3,7 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
-import { LAYOUT, type LayoutArchetype } from '@/config/site';
+import { LAYOUT, CONTENT_WIDTH, type LayoutArchetype, type ContentWidth } from '@/config/site';
 import { cn } from '@/lib/utils';
 
 /**
@@ -20,16 +20,40 @@ import { cn } from '@/lib/utils';
  * came out looking identical, down to the same `bg-muted/40` rail at the same
  * 256px.
  *
- * Layout is a consequence of information architecture, not a house style. Real
- * products pick by destination count and interaction model: Linear and Stripe
- * carry sidebars because they have many destinations; a focused tool has no nav
- * at all; a board or canvas app gives the canvas the whole viewport and floats
- * its controls. Forcing one of those shapes onto the other two is the actual
- * design error.
+ * Layout is a consequence of information architecture, not a house style, and
+ * the published thresholds agree on roughly where the lines fall:
+ *
+ *   Material 3    navigation drawer at 5+ destinations or more than one level of
+ *                 hierarchy; navigation rail carries 3-7; "don't use a
+ *                 navigation bar for fewer than three destinations — use tabs".
+ *   WinUI         top navigation at 5 or fewer top-level categories; left
+ *                 navigation at 5-10.
+ *   Apple HIG     "prefer a tab bar"; convert to a sidebar when the app is more
+ *                 complex; no more than two levels of hierarchy in a sidebar.
+ *   IBM Carbon    the left panel is optional and earns its place above ~5
+ *                 secondary items; the header "can be used on its own".
+ *   NN/g          top nav suits most products; vertical nav wins for broad or
+ *                 growing IAs, at a worse content-to-chrome ratio.
+ *
+ * Note the disagreement rather than pretending it away: Shopify Polaris makes a
+ * sidebar effectively mandatory (its frame requires the navigation component),
+ * Carbon calls it optional, and WinUI recommends against one at five or fewer
+ * destinations. Material also DEPRECATED the navigation drawer in May 2025 in
+ * favour of an expanded rail, so "sidebar" here means rail-expanded-or-collapsed
+ * rather than a drawer.
  *
  * So the archetype is chosen per app (see LAYOUT in @/config/site) and this
  * component composes the matching chrome. All four are equally finished — none
  * is a downgrade, and picking the fitting one is not "less polished".
+ *
+ * Two things this deliberately does NOT do:
+ *   - It does not decide content width. That is an independent axis
+ *     (CONTENT_WIDTH / the `width` prop): a topbar app of wide data tables wants
+ *     full width, a settings form inside a sidebar app wants a readable measure.
+ *   - It does not model list-detail. That shape is not mutually exclusive with
+ *     any of these (an app can have a rail AND a list-detail page, as Figma has
+ *     both a rail and a canvas), so it composes INSIDE an archetype — see
+ *     ListDetail.
  *
  * ARCHETYPES
  * ==========
@@ -45,6 +69,11 @@ import { cn } from '@/lib/utils';
  *
  *   canvas   Topbar + full-bleed main that does NOT scroll — the board, map or
  *            editor inside owns its own scrolling and gets the whole viewport.
+ *            Put the surface's own controls in DOCKED, resizable rails, not
+ *            floating panels: Figma shipped floating panels in UI3, measured
+ *            them, found they "slowed people down" and cramped the canvas on
+ *            smaller screens, and reverted to docked rails with floating left
+ *            as an opt-in "Minimize UI" mode.
  *
  * SHARED MEASUREMENTS (shadcn/ui defaults + the dashboard-01 block)
  *   topbar 48px · gutters 16px, 24px at lg · rhythm 24px (gap-6)
@@ -56,6 +85,7 @@ export function AppShell({
   headerActions,
   account,
   layout,
+  width,
 }: {
   children: ReactNode;
   /** Current page name — shown in the topbar on mobile where the rail is hidden. */
@@ -71,9 +101,19 @@ export function AppShell({
    * otherwise sidebar app.
    */
   layout?: LayoutArchetype;
+  /**
+   * Content width for this route, overriding CONTENT_WIDTH. Nav placement and
+   * content width are independent axes — a topbar app of wide data tables wants
+   * 'fluid', a settings form inside a sidebar app wants 'clamped'.
+   */
+  width?: ContentWidth;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const archetype: LayoutArchetype = layout ?? LAYOUT;
+  // `focused` is defined by its narrow measure, so it always clamps; otherwise
+  // the app-wide policy applies unless this route overrides it.
+  const widthPolicy: ContentWidth =
+    archetype === 'focused' ? 'clamped' : (width ?? CONTENT_WIDTH);
 
   // Only the sidebar archetype mounts a rail. The others would render an empty
   // or near-empty 256px column, which is exactly the wasted chrome this exists
@@ -92,13 +132,18 @@ export function AppShell({
     archetype === 'canvas' ? 'p-0' : 'px-4 py-6 lg:px-6',
   );
 
-  // Content width. The sidebar inset is already narrow, so it stays fluid (the
-  // shadcn dashboard block is full-bleed inside the inset). Without a rail,
-  // full-bleed text runs to unreadable line lengths on a wide monitor, so those
-  // archetypes clamp: 1280px for a topbar app, 768px for a focused one.
+  // Content width comes from the POLICY, not from where nav sits.
+  //
+  // 'focused' clamps narrow (max-w-3xl, ~768px) because a readable measure is
+  // the entire point of that archetype. Anything else that clamps gets
+  // max-w-7xl (1280px), a middle ground between Polaris capping a page at 998px
+  // and Carbon capping its grid at 1584px — neither is authoritative, and
+  // Atlassian caps main at nothing at all. 'canvas' never clamps: the surface
+  // owns the viewport.
   const contentClasses = cn(
-    archetype === 'topbar' && 'mx-auto w-full max-w-7xl',
-    archetype === 'focused' && 'mx-auto w-full max-w-3xl',
+    widthPolicy === 'clamped'
+      && archetype !== 'canvas'
+      && (archetype === 'focused' ? 'mx-auto w-full max-w-3xl' : 'mx-auto w-full max-w-7xl'),
   );
 
   return (
