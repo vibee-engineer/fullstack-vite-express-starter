@@ -198,7 +198,19 @@ export function TasksPage() {
           <EmptyState
             icon={ListChecks}
             title="No tasks yet"
-            description="Add your first task with the form above. Seeded projects start with three."
+            description="Add your first task to see it here."
+            // The action is the point of an empty state: never leave the user
+            // with copy telling them to act and nothing to click. Focusing the
+            // existing form is a legitimate action when the form is on-page;
+            // when it is not, link or open the create surface.
+            action={
+              <Button
+                size="sm"
+                onClick={() => document.getElementById('title')?.focus()}
+              >
+                Add a task
+              </Button>
+            }
           />
         ) : null}
 

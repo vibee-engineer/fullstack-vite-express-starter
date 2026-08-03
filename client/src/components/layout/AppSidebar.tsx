@@ -72,7 +72,7 @@ export function AppSidebar({
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
         <div
           aria-hidden
-          className="grid size-6 shrink-0 place-items-center rounded bg-primary text-[11px] font-semibold text-primary-foreground"
+          className="grid size-6 shrink-0 place-items-center rounded bg-primary text-xs font-semibold text-primary-foreground"
         >
           {SITE.name.slice(0, 1).toUpperCase()}
         </div>
@@ -85,7 +85,7 @@ export function AppSidebar({
         {NAV_SECTIONS.map((section, i) => (
           <div key={section.heading ?? `section-${i}`} className={cn(i > 0 && 'mt-5')}>
             {section.heading && !collapsed && (
-              <div className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <div className="px-2 pb-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {section.heading}
               </div>
             )}
