@@ -62,15 +62,40 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
+        // Consume the emitted LADDER, not arithmetic off a single value.
+        // tokens.css ships --radius-sm/md/lg as three independent brand values
+        // (e.g. 6/10/14px); deriving md as `--radius - 2px` threw two of the
+        // three steps away and silently rendered lg at 10px where the brand
+        // asked for 14px. --radius is kept as the fallback so a tokens.css that
+        // predates the ladder still resolves.
+        lg: 'var(--radius-lg, var(--radius))',
+        md: 'var(--radius-md, calc(var(--radius) - 2px))',
+        sm: 'var(--radius-sm, calc(var(--radius) - 4px))',
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        heading: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        body: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // The brand's typefaces, not a hardcoded Inter. tokens.css ships
+        // --font-display and --font-body from the generated brand (e.g. Sora /
+        // IBM Plex Sans) and this config pinned every family to Inter, so the
+        // chosen typography never reached a single rendered element — the most
+        // visible half of a brand, discarded one line above the colours that
+        // were wired correctly. Inter stays as the fallback inside the var.
+        sans: ['var(--font-body, Inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['var(--font-display, Inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display, Inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        body: ['var(--font-body, Inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      // Motion tokens were emitted and unreachable: no utility mapped to them,
+      // so every transition used Tailwind's default 150ms/ease and the brand's
+      // Carbon-productive scale sat unused in tokens.css.
+      transitionDuration: {
+        fast: 'var(--dur-fast, 100ms)',
+        base: 'var(--dur-base, 150ms)',
+        slow: 'var(--dur-slow, 240ms)',
+      },
+      transitionTimingFunction: {
+        out: 'var(--ease-out, cubic-bezier(0.165, 0.84, 0.44, 1))',
+        'in-out': 'var(--ease-in-out, cubic-bezier(0.645, 0.045, 0.355, 1))',
       },
       keyframes: {
         'accordion-down': {
@@ -83,8 +108,10 @@ const config: Config = {
         },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
+        'accordion-down':
+          'accordion-down var(--dur-slow, 240ms) var(--ease-out, cubic-bezier(0.165,0.84,0.44,1))',
+        'accordion-up':
+          'accordion-up var(--dur-slow, 240ms) var(--ease-out, cubic-bezier(0.165,0.84,0.44,1))',
       },
     },
   },
