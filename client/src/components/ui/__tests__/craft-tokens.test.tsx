@@ -33,7 +33,11 @@ describe('Card', () => {
 
   test('draws its hairline as a ring, not a border', () => {
     const c = cardClasses();
-    expect(c).toContain('var(--ring-hairline)');
+    // --elevation-card is PRE-COMPOSED: hairline ring + one elevation step in a
+    // single var. It has to be one var because Tailwind cannot parse a top-level
+    // comma in an arbitrary value — shadow-[var(--a),var(--b)] compiles to no
+    // rule at all, which is exactly how this shipped broken once.
+    expect(c).toContain('var(--elevation-card)');
     // A border participates in layout and double-draws the edge alongside a
     // shadow. Geist ships borders as shadows for exactly this reason.
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
@@ -41,7 +45,7 @@ describe('Card', () => {
   });
 
   test('carries one step of elevation from the ladder', () => {
-    expect(cardClasses()).toContain('var(--shadow-xs)');
+    expect(cardClasses()).toContain('var(--elevation-card)');
   });
 
   test('takes its radius from the ladder, not a single uniform value', () => {
@@ -90,7 +94,7 @@ describe('Button', () => {
 
   test('the outline variant uses a ring rather than a border', () => {
     const c = btnClasses({ variant: 'outline' });
-    expect(c).toContain('var(--ring-hairline)');
+    expect(c).toContain('var(--elevation-flat)');
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
   });
 
@@ -105,9 +109,10 @@ describe('Button', () => {
     // h-9 = 36px, h-10 = 40px, h-11 = 44px, icon is 40x40. All well clear.
     for (const size of ['default', 'sm', 'lg', 'icon'] as const) {
       const c = btnClasses({ size });
-      const m = c.match(/h-(\d+)/);
+      const m = /h-(\d+)/.exec(c);
       expect(m).not.toBeNull();
-      expect(parseInt(m![1], 10) * 4).toBeGreaterThanOrEqual(24);
+      const rem = m ? Number(m[1]) : 0;
+      expect(rem * 4).toBeGreaterThanOrEqual(24);
     }
   });
 });
@@ -116,7 +121,7 @@ describe('Input', () => {
   test('uses a ring hairline and the control radius', () => {
     const { container } = render(<Input />);
     const c = classesOf(container.querySelector('input'));
-    expect(c).toContain('var(--ring-hairline)');
+    expect(c).toContain('var(--elevation-flat)');
     expect(c).toContain('var(--radius-sm)');
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
   });

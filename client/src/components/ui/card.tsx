@@ -15,7 +15,13 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
         // shadows for exactly these reasons
         // (--ds-shadow-border-base: 0 0 0 1px #00000014).
         //
-        // --ring-hairline and --shadow-xs come from tokens.css. --card is now a
+        // MUST be ONE pre-composed var. Tailwind cannot parse a top-level comma
+        // inside an arbitrary value, so shadow-[var(--a),var(--b)] compiles to
+        // NOTHING — measured on a live app where the class sat on 5 elements,
+        // both tokens resolved, and computed boxShadow was still "none".
+        // --elevation-card ships hairline + elevation together from tokens.css,
+        // which is also the correct pairing: never a border AND a shadow on the
+        // same node. --card is now a
         // genuinely different colour from --background (they used to be
         // identical, which is why every card read as a flat bordered rectangle
         // on one flat plane).
@@ -24,7 +30,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
         // at lg while buttons and inputs sit at sm. One radius everywhere is the
         // most recognisable generated-UI tell.
         'rounded-[var(--radius-lg)] bg-card text-card-foreground',
-        'shadow-[var(--ring-hairline),var(--shadow-xs)]',
+        'shadow-[var(--elevation-card)]',
         className,
       )}
       {...props}
