@@ -27,10 +27,71 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+
+  /* Optical sizing + typographic features.
+   *
+   * Generated UI is typeset at browser defaults, which is a large part of why it
+   * reads as undesigned even when the layout is right. Three cheap changes:
+   *
+   * - font-optical-sizing: auto lets a variable font adjust stroke contrast and
+   *   aperture by size, which is the difference between "big text" and display
+   *   typography.
+   * - "cv01","ss03" are Inter's alternate one-storey `a` / disambiguated forms;
+   *   Linear ships exactly this pair. "calt" keeps contextual alternates on.
+   * - `ss01` is a no-op on fonts that lack it, so this degrades safely if the
+   *   brand font is not Inter.
+   */
+  font-optical-sizing: auto;
+  font-feature-settings: 'cv01', 'ss03', 'calt' 1;
 }
 
 body {
   @apply bg-background text-foreground font-body;
+  /* Body tracking. Inter's published dynamic-metrics curve is
+   * t = -0.0223 + 0.185 * e^(-0.1745 * px); --tracking-body is the step that
+   * corresponds to 15-19px. Untracked body copy at these sizes reads loose. */
+  letter-spacing: var(--tracking-body);
+}
+
+/* Optical tracking by size. Large text needs negative tracking or it looks
+ * spaced out; small text needs positive tracking or it looks cramped. These are
+ * the discrete steps Linear ships, and they apply automatically so a page does
+ * not have to remember them. */
+h1,
+.text-display {
+  letter-spacing: var(--tracking-display);
+}
+
+h2,
+h3 {
+  letter-spacing: var(--tracking-title);
+}
+
+.text-xs,
+.text-\[11px\] {
+  letter-spacing: var(--tracking-micro);
+}
+
+/* Every number that can change width MUST be tabular, or columns misalign and
+ * live-updating values visibly jitter as digits swap. Applies to metrics,
+ * currency, timers, percentages and table numerics — never to prose. */
+.tabular,
+[data-numeric] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Honour reduced motion by REDUCING, not deleting. A blanket
+ * `animation: none !important` is the documented anti-pattern: it strips
+ * meaningful state changes too. Swap movement for opacity and shorten. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Ensure Radix portals inherit theme tokens. */

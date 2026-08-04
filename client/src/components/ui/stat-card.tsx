@@ -42,10 +42,16 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <Card className={cn('gap-0 py-4', className)}>
+    <Card className={cn('h-full gap-0 py-4', className)}>
       <CardContent className="px-4">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">{label}</span>
+        {/* min-h-10 reserves two lines of label space.
+            Measured bug (hotel dashboard, 2026-08-04): "Confirmed Reservations"
+            wrapped to two lines while its three siblings stayed on one, so that
+            card grew taller and the KPI row visibly stepped. h-full on the Card
+            plus a reserved label box keeps the row flush whether labels wrap or
+            not — cheaper and more robust than shortening every label. */}
+        <div className="flex min-h-10 items-start justify-between gap-2">
+          <span className="text-sm leading-5 text-muted-foreground">{label}</span>
           {Icon ? <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" /> : null}
         </div>
         <div className="mt-2 flex items-baseline gap-2">
