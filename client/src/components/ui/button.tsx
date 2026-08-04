@@ -29,12 +29,12 @@ const buttonVariants = cva(
         // light edge reads as a physical raised surface rather than a filled
         // rectangle. --shadow-button ships it from tokens.css.
         default:
-          'bg-primary text-primary-foreground shadow-[var(--shadow-button)] hover:bg-primary/90',
+          'bg-primary text-primary-foreground shadow-[shadow:var(--shadow-button)] hover:bg-primary/90',
         destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         // Ring rather than border, same reasoning as Card: no layout
         // participation, and it composes with the focus ring in one property.
         outline:
-          'bg-background shadow-[var(--elevation-flat)] hover:bg-accent hover:text-accent-foreground',
+          'bg-background shadow-[shadow:var(--elevation-flat)] hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary underline-offset-4 hover:underline',

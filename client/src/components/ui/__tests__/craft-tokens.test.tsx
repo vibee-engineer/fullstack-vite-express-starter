@@ -37,7 +37,7 @@ describe('Card', () => {
     // single var. It has to be one var because Tailwind cannot parse a top-level
     // comma in an arbitrary value — shadow-[var(--a),var(--b)] compiles to no
     // rule at all, which is exactly how this shipped broken once.
-    expect(c).toContain('var(--elevation-card)');
+    expect(c).toContain('shadow:var(--elevation-card)');
     // A border participates in layout and double-draws the edge alongside a
     // shadow. Geist ships borders as shadows for exactly this reason.
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
@@ -45,7 +45,7 @@ describe('Card', () => {
   });
 
   test('carries one step of elevation from the ladder', () => {
-    expect(cardClasses()).toContain('var(--elevation-card)');
+    expect(cardClasses()).toContain('shadow:var(--elevation-card)');
   });
 
   test('takes its radius from the ladder, not a single uniform value', () => {
@@ -89,12 +89,12 @@ describe('Button', () => {
 
   test('the primary variant carries the inset highlight', () => {
     // Linear's inset top edge: the highest "designed" signal per line of CSS.
-    expect(btnClasses()).toContain('var(--shadow-button)');
+    expect(btnClasses()).toContain('shadow:var(--shadow-button)');
   });
 
   test('the outline variant uses a ring rather than a border', () => {
     const c = btnClasses({ variant: 'outline' });
-    expect(c).toContain('var(--elevation-flat)');
+    expect(c).toContain('shadow:var(--elevation-flat)');
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
   });
 
@@ -121,7 +121,7 @@ describe('Input', () => {
   test('uses a ring hairline and the control radius', () => {
     const { container } = render(<Input />);
     const c = classesOf(container.querySelector('input'));
-    expect(c).toContain('var(--elevation-flat)');
+    expect(c).toContain('shadow:var(--elevation-flat)');
     expect(c).toContain('var(--radius-sm)');
     expect(c).not.toMatch(/(^|\s)border(\s|$)/);
   });

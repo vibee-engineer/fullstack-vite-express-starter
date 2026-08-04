@@ -30,7 +30,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
         // at lg while buttons and inputs sit at sm. One radius everywhere is the
         // most recognisable generated-UI tell.
         'rounded-[var(--radius-lg)] bg-card text-card-foreground',
-        'shadow-[var(--elevation-card)]',
+        'shadow-[shadow:var(--elevation-card)]',
         className,
       )}
       {...props}
