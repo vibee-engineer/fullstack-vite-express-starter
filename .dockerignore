@@ -1,0 +1,15 @@
+# Keep installed deps and build junk OUT of the build context so `COPY server`,
+# `COPY client`, `COPY shared` bake only SOURCE into the image (and never clobber
+# the node_modules that `npm install` just produced, nor bloat the image/context).
+**/node_modules
+node_modules
+.git
+.github
+**/dist
+**/build
+*.tsbuildinfo
+*.log
+.DS_Store
+.founding
+.claude
+.gstack

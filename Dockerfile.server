@@ -25,6 +25,17 @@ COPY server/prisma ./server/prisma
 RUN npm install --workspaces --include-workspace-root
 RUN npx --workspace server prisma generate || true
 
+# Bake the workspace SOURCE into the image so the PRODUCTION container is
+# self-contained. In dev, docker-compose bind-mounts ./server and ./shared over
+# these paths, so this COPY is inert for the preview — it matters only in prod
+# (Fly native), where there are NO bind mounts and the image must ship its own
+# code. Without it the prod image carries only package.json + prisma and `tsx`
+# dies with `ERR_MODULE_NOT_FOUND: src/index.ts` — the container "runs" but never
+# binds :3001, so every request 502s (the exact prod-publish failure this fixes).
+# .dockerignore keeps node_modules / build output out of these COPYs.
+COPY shared ./shared
+COPY server ./server
+
 WORKDIR /app/server
 EXPOSE 3001
 
@@ -33,7 +44,8 @@ EXPOSE 3001
 COPY server/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# The entrypoint applies pending migrations, then execs this CMD. Without it the
-# API boots against an empty database and every data route 500s on P2021.
+# The entrypoint applies pending migrations, then either execs this CMD (dev
+# preview → tsx watch) or, when NODE_ENV=production, runs the prod server.
+# Without it the API boots against an empty database and every data route 500s.
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "run", "dev"]

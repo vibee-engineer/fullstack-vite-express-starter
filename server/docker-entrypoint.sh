@@ -47,4 +47,14 @@ else
   exit 78 # EX_CONFIG
 fi
 
+# Production (published app): run the prod server directly — no file watcher.
+# The image's default CMD is the DEV command (`npm run dev` → tsx watch) for the
+# live preview; in prod we exec `npm run start` (tsx straight from TS source, no
+# build artifact needed). This is what makes a published fullstack app run in
+# production mode instead of the dev watcher.
+if [ "${NODE_ENV:-development}" = "production" ]; then
+  echo "[entrypoint] NODE_ENV=production — starting the production server."
+  exec npm run start
+fi
+
 exec "$@"
