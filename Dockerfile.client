@@ -2,22 +2,38 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy root workspace manifests + workspace package.jsons so `npm ci` can
-# resolve the full graph. Source is bind-mounted at runtime.
+# Copy root workspace manifests + workspace package.jsons so `npm install` can
+# resolve the full graph. Source is bind-mounted at runtime in DEV; baked in for
+# PROD (see the COPY below).
 COPY package.json package-lock.json* ./
 # Needed because client/tsconfig.json does `"extends": "../tsconfig.base.json"`.
 # Vite itself resolves `@shared/*` from its own vite.config.ts aliases, so the
-# dev server survives without this — but `npm run typecheck -w client` inside
-# the container fails to load its tsconfig at all. Copy it so the container is
-# not subtly less capable than the host. See Dockerfile.server for the runtime
-# failure this same omission caused there.
+# dev server survives without this — but `npm run typecheck -w client` and the
+# prod `vite build` inside the container fail to load their tsconfig without it.
 COPY tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
 RUN npm install --workspaces --include-workspace-root
+# `serve` is the production static server (SPA fallback). Installed at BUILD time
+# so the prod container never has to reach the npm registry at boot.
+RUN npm install -g serve
+
+# Bake the workspace SOURCE into the image so the PRODUCTION container is
+# self-contained (dev bind-mounts ./client and ./shared over these, so the COPY
+# is inert for the preview). Without it the prod build has no app to compile.
+# .dockerignore keeps node_modules / build output out of these COPYs.
+COPY shared ./shared
+COPY client ./client
 
 WORKDIR /app/client
 EXPOSE 5173
+
+# Installed to /usr/local/bin so the `./client:/app/client` dev bind mount cannot
+# shadow it. In dev the entrypoint execs the CMD (Vite dev server + HMR); in prod
+# (NODE_ENV=production) it builds the static bundle and serves it.
+COPY client/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
