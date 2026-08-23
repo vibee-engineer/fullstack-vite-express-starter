@@ -1,23 +1,43 @@
+# ─── SHARED PREFIX — keep BYTE-IDENTICAL with Dockerfile.server ──────────────
+# BuildKit shares layer cache across the two images only while their
+# instruction streams are identical. Everything down to `RUN npm ci` matches
+# Dockerfile.server exactly, so the expensive workspace install is built ONCE
+# per machine and reused by whichever image builds second. It is also the
+# layer prebuilt image tarballs warm via compose's cache_from. Diverge only
+# BELOW the end-of-prefix marker, and never edit the prefix in one file
+# without the other.
+#
+# openssl: required by the Prisma engine binary on alpine (server-side need);
+# ~1 MB in the client image — the price of an identical prefix.
 FROM node:20-alpine
+
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Copy root workspace manifests + workspace package.jsons so `npm install` can
-# resolve the full graph. Source is bind-mounted at runtime in DEV; baked in for
-# PROD (see the COPY below).
-COPY package.json package-lock.json* ./
-# Needed because client/tsconfig.json does `"extends": "../tsconfig.base.json"`.
-# Vite itself resolves `@shared/*` from its own vite.config.ts aliases, so the
-# dev server survives without this — but `npm run typecheck -w client` and the
-# prod `vite build` inside the container fail to load their tsconfig without it.
+# Root workspace manifests + workspace package.jsons: the full graph `npm ci`
+# needs. tsconfig.base.json is REQUIRED at runtime, not just typechecking —
+# every workspace tsconfig does `"extends": "../tsconfig.base.json"`, and the
+# bind mounts in docker-compose.yml cover ./client, ./server and ./shared but
+# NOT root-level files, so this COPY is the only thing that puts it in the
+# image. Without it, `paths` silently fails to resolve and every `@shared/...`
+# import dies with ERR_MODULE_NOT_FOUND.
+COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 COPY server/package.json ./server/
 
-RUN npm install --workspaces --include-workspace-root
-# `serve` is the production static server (SPA fallback). Installed at BUILD time
-# so the prod container never has to reach the npm registry at boot.
+# npm ci, not npm install: deterministic from the committed lockfile, and it
+# fails LOUDLY when package.json and the lockfile disagree instead of silently
+# reconciling them (a silent reconcile here defeats the prebuilt-image
+# fingerprint downstream). server's postinstall (prisma generate || true)
+# no-ops in this layer — the schema is COPYed per-image after the prefix.
+RUN npm ci
+# ─── END SHARED PREFIX ───────────────────────────────────────────────────────
+
+# `serve` is the production static server (SPA fallback). Installed at BUILD
+# time so the prod container never has to reach the npm registry at boot.
 RUN npm install -g serve
 
 # Bake the workspace SOURCE into the image so the PRODUCTION container is

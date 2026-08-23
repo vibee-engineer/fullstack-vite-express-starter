@@ -1,28 +1,44 @@
+# ─── SHARED PREFIX — keep BYTE-IDENTICAL with Dockerfile.client ──────────────
+# BuildKit shares layer cache across the two images only while their
+# instruction streams are identical. Everything down to `RUN npm ci` matches
+# Dockerfile.client exactly, so the expensive workspace install is built ONCE
+# per machine and reused by whichever image builds second. It is also the
+# layer prebuilt image tarballs warm via compose's cache_from. Diverge only
+# BELOW the end-of-prefix marker, and never edit the prefix in one file
+# without the other.
+#
+# openssl: required by the Prisma engine binary on alpine (server-side need);
+# ~1 MB in the client image — the price of an identical prefix.
 FROM node:20-alpine
 
-# openssl is required by the Prisma engine binary on alpine.
 RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-# tsconfig.base.json is REQUIRED at runtime, not just for typechecking. Every
-# workspace tsconfig does `"extends": "../tsconfig.base.json"`, and the server
-# runs from TS source via tsx, which reads server/tsconfig.json to get the
-# `@shared/*` path aliases. If the extends target is missing, the whole
-# tsconfig fails to resolve, `paths` is silently lost, and every
-# `@shared/...` import falls through to bare-package resolution and dies with
-# `ERR_MODULE_NOT_FOUND: Cannot find package '@shared/schemas'` — the server
-# container boots, stays "running", and every /api/* request 502s through
-# nginx. The bind mounts below cover ./server and ./shared but NOT root-level
-# files, so this COPY is the only thing that puts it in the image.
+# Root workspace manifests + workspace package.jsons: the full graph `npm ci`
+# needs. tsconfig.base.json is REQUIRED at runtime, not just typechecking —
+# every workspace tsconfig does `"extends": "../tsconfig.base.json"`, and the
+# bind mounts in docker-compose.yml cover ./client, ./server and ./shared but
+# NOT root-level files, so this COPY is the only thing that puts it in the
+# image. Without it, `paths` silently fails to resolve and every `@shared/...`
+# import dies with ERR_MODULE_NOT_FOUND.
+COPY package.json package-lock.json ./
 COPY tsconfig.base.json ./
 COPY shared/package.json ./shared/
 COPY client/package.json ./client/
 COPY server/package.json ./server/
-COPY server/prisma ./server/prisma
 
-RUN npm install --workspaces --include-workspace-root
+# npm ci, not npm install: deterministic from the committed lockfile, and it
+# fails LOUDLY when package.json and the lockfile disagree instead of silently
+# reconciling them (a silent reconcile here defeats the prebuilt-image
+# fingerprint downstream). server's postinstall (prisma generate || true)
+# no-ops in this layer — the schema is COPYed per-image after the prefix.
+RUN npm ci
+# ─── END SHARED PREFIX ───────────────────────────────────────────────────────
+
+# The schema arrives after the shared install layer, so postinstall's generate
+# was a no-op above; generate for real now that the schema exists.
+COPY server/prisma ./server/prisma
 RUN npx --workspace server prisma generate || true
 
 # Bake the workspace SOURCE into the image so the PRODUCTION container is

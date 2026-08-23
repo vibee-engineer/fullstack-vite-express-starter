@@ -25,6 +25,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.server
+      # Prebuilt-image warm start (founding.dev machine images ship these tags
+      # and `docker load` them on first boot). BuildKit will NOT treat a loaded
+      # image as build cache unless it is named here — without these lines the
+      # first boot silently degrades to a full npm ci even when the layers are
+      # already on disk. Both tags are listed because the two Dockerfiles share
+      # a byte-identical prefix, so either image can warm the install layer.
+      # Harmless when the tags don't exist (plain warning, normal build).
+      cache_from:
+        - fdev-prebuilt-server:latest
+        - fdev-prebuilt-client:latest
     restart: unless-stopped
     environment:
       NODE_ENV: development
@@ -46,6 +56,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.client
+      # See server.build.cache_from — same warm-start contract.
+      cache_from:
+        - fdev-prebuilt-client:latest
+        - fdev-prebuilt-server:latest
     restart: unless-stopped
     environment:
       VITE_API_URL: /api
