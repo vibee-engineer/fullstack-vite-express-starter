@@ -18,12 +18,14 @@
 export const SITE = {
   /** Brand wordmark in the sidebar / topbar. Keep it short — it sits in 256px. */
   name: 'App',
-  /** One-sentence positioning. Meta description + auth screens; not shown in chrome. */
-  tagline: 'A fullstack app generated with founding.dev.',
+  /** One-sentence positioning for THIS app. Meta description + auth subtitle.
+   *  Keep it about the product — never platform branding. */
+  tagline: 'Everything you need, in one place.',
   /** Canonical URL, used for OG tags. Overwritten at deploy. */
   url: 'http://localhost:8888',
   /** OG image path — relative to public/. */
   ogImage: '/og.png',
+  /** Meta author. Platform attribution lives ONLY in favicon + meta, never UI. */
   author: 'founding.dev',
 };
 
