@@ -102,10 +102,23 @@ body {
     'cv02', 'cv03', 'cv04', 'cv11'; /* nicer digits/letterforms where the face supports them */
 }
 
-/* Headings get tight negative tracking by default — the single craft detail that
- * reads "art-directed" instead of "browser default". Utilities (tracking-*)
- * still override per element. Values from the funded-app type spec: hero -0.03em,
- * h1 -0.02em, h2/h3 -0.015em. */
+/* Headings get the DISPLAY face + tight negative tracking by default — the two
+ * craft details that read "art-directed" instead of "browser default".
+ *
+ * The font-family line is load-bearing: without it, headings inherit --font-body
+ * and the distinct display face defined in tokens (e.g. Space Grotesk) never
+ * renders anywhere. An identical heading+body font (Inter/Inter) is the single
+ * biggest "untouched template" tell — the exact thing the token layer works to
+ * avoid, undone at the last step. Utilities (font-*, tracking-*) still override
+ * per element. Tracking from the funded-app type spec: h1 -0.021em, h2/h3 -0.015em. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
 h1 {
   letter-spacing: -0.021em;
 }
