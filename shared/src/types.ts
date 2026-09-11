@@ -18,6 +18,7 @@ import type {
   RegisterSchema,
   LoginSchema,
 } from './schemas/auth';
+import type { FileMetaSchema, FileListSchema } from './schemas/file';
 import type {
   TaskSchema,
   TaskStatusSchema,
@@ -41,6 +42,10 @@ export type AuthUser = z.infer<typeof AuthUserSchema>;
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type Register = z.infer<typeof RegisterSchema>;
 export type Login = z.infer<typeof LoginSchema>;
+
+/** File-upload shapes — see shared/src/schemas/file.ts. */
+export type FileMeta = z.infer<typeof FileMetaSchema>;
+export type FileList = z.infer<typeof FileListSchema>;
 
 /** Task — the reference resource. See shared/src/schemas/task.ts. */
 export type Task = z.infer<typeof TaskSchema>;

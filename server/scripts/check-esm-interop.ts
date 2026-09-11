@@ -30,6 +30,7 @@ const MODULES = [
   '../mongoose/models/Task.ts',
   '../mongoose/models/User.ts',
   '../mongoose/models/Session.ts',
+  '../mongoose/models/File.ts',
 ];
 
 let failed = 0;

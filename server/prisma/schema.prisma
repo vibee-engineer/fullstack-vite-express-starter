@@ -45,6 +45,21 @@ model Session {
   @@index([userId])
 }
 
+/// An uploaded file's METADATA. The bytes live in the storage driver
+/// (server/src/services/storage) under `storageKey`; this row points at them.
+/// Opt-in: apps without uploads never create rows here. See routes/files.ts.
+model File {
+  id          String   @id @default(cuid())
+  filename    String
+  contentType String
+  size        Int
+  /// Opaque key the storage driver round-trips. Never sent to a client.
+  storageKey  String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 /// Task lifecycle. Mirrors `TASK_STATUSES` in shared/src/schemas/task.ts —
 /// keep the two in sync; the zod enum is what validates the wire payload.
 enum TaskStatus {

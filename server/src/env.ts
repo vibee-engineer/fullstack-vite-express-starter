@@ -21,12 +21,31 @@ const EnvSchema = z
      * Mongo is up. IGNORED when NODE_ENV=production — see `skipDb` below.
      */
     SKIP_DB: z.string().optional(),
+
+    // ── File uploads (see server/src/services/storage) ──────────────────────
+    /** Where the local-disk storage driver writes. Default `./uploads`. */
+    UPLOAD_DIR: z.string().default('uploads'),
+    /** `local` (default, disk) or `s3` (S3/R2/any S3-compatible bucket). */
+    STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+    /** Max accepted upload size in bytes. Default 10 MB. */
+    MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+    /** S3 driver config — required only when STORAGE_DRIVER=s3. */
+    S3_BUCKET: z.string().optional(),
+    S3_REGION: z.string().optional(),
+    /** Custom endpoint for R2 / MinIO / Spaces. Omit for AWS S3. */
+    S3_ENDPOINT: z.string().url().optional(),
+    /** Public base URL for objects, if the bucket is served publicly. */
+    S3_PUBLIC_URL: z.string().url().optional(),
   })
   .refine((v) => skipDbRequested(v) || Boolean(v.DATABASE_URL || v.MONGO_URL), {
     message:
       'Either DATABASE_URL (Postgres) or MONGO_URL (Mongo) must be set. ' +
       'For local dev without a database, run `docker compose up -d db` or set SKIP_DB=1.',
     path: ['DATABASE_URL'],
+  })
+  .refine((v) => v.STORAGE_DRIVER !== 's3' || Boolean(v.S3_BUCKET && v.S3_REGION), {
+    message: 'STORAGE_DRIVER=s3 requires S3_BUCKET and S3_REGION.',
+    path: ['S3_BUCKET'],
   });
 
 function skipDbRequested(v: { NODE_ENV?: string; SKIP_DB?: string }): boolean {
