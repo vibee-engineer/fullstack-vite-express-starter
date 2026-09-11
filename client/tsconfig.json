@@ -8,7 +8,7 @@
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": false,
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],

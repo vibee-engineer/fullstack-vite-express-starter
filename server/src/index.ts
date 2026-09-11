@@ -1,5 +1,7 @@
 import { createApp } from './app';
 import { env, isPostgres, isMongo, skipDb } from './env';
+import { registerBackupJob } from './services/backups';
+import { registerJobs, runner, scheduler } from './services/jobs';
 import { logger } from './logger';
 
 /**
@@ -7,7 +9,8 @@ import { logger } from './logger';
  *   1. Validate env (side effect of importing env.ts).
  *   2. Connect DB (Prisma or Mongo, whichever is configured) — unless SKIP_DB.
  *   3. app.listen().
- *   4. Wire graceful shutdown on SIGTERM/SIGINT.
+ *   4. Register + start recurring jobs (no-op until any are registered).
+ *   5. Wire graceful shutdown on SIGTERM/SIGINT.
  */
 async function main() {
   if (skipDb) {
@@ -31,9 +34,18 @@ async function main() {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, 'server listening');
   });
 
+  // Recurring jobs. Empty by default; see server/src/services/jobs.
+  registerJobs();
+  // Daily Postgres backup, if BACKUP_DAILY_AT is set. See services/backups.
+  registerBackupJob(scheduler);
+  scheduler.start();
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutdown signal received');
     server.close();
+    // Stop firing new work and let in-flight background tasks finish (bounded).
+    scheduler.stop();
+    await Promise.race([runner.drain(), new Promise((r) => setTimeout(r, 5000))]);
     if (isPostgres) {
       const { prisma } = await import('./db/prisma');
       await prisma.$disconnect();

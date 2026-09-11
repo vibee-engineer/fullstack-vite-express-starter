@@ -10,13 +10,54 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Example resource. The agent replaces this with real models per brief.
+/// Auth roles. `owner` = the business owner (full access); `staff` = invited user.
+enum Role {
+  owner
+  staff
+}
+
+/// User + auth. `passwordHash` is nullable so a User can exist before a
+/// password is set (e.g. an invited staff member). Auth is opt-in: apps without
+/// a login just never mount the auth routes — these columns sit unused, they do
+/// not force auth on. See server/src/services/auth.
 model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  passwordHash String?
+  role         Role      @default(owner)
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+/// A server-side session. The token lives in an httpOnly cookie; the row here is
+/// the source of truth, so sessions are revocable (logout deletes the row) and
+/// survive a process restart. Expired rows are ignored and swept lazily.
+model Session {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// An uploaded file's METADATA. The bytes live in the storage driver
+/// (server/src/services/storage) under `storageKey`; this row points at them.
+/// Opt-in: apps without uploads never create rows here. See routes/files.ts.
+model File {
+  id          String   @id @default(cuid())
+  filename    String
+  contentType String
+  size        Int
+  /// Opaque key the storage driver round-trips. Never sent to a client.
+  storageKey  String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 /// Task lifecycle. Mirrors `TASK_STATUSES` in shared/src/schemas/task.ts —

@@ -34,6 +34,10 @@ yarn-error.log*
 server/prisma/migrations/dev.db*
 server/prisma/*.db*
 
+# local file-upload storage (LocalDiskDriver, env UPLOAD_DIR)
+server/uploads
+uploads
+
 # coverage / caches
 coverage
 .eslintcache
