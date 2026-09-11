@@ -11,7 +11,13 @@
  * SDK installed or the network.
  */
 
-import { assertValidMessage, recipients, type EmailMessage, type EmailSender, type SentEmail } from './message';
+import {
+  assertValidMessage,
+  recipients,
+  type EmailMessage,
+  type EmailSender,
+  type SentEmail,
+} from './message';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface SesClientLike {
@@ -25,7 +31,9 @@ export interface SesConfig {
   loadClient?: () => Promise<{ client: SesClientLike; SendEmailCommand: any }>;
 }
 
-async function defaultLoadClient(region: string): Promise<{ client: SesClientLike; SendEmailCommand: any }> {
+async function defaultLoadClient(
+  region: string,
+): Promise<{ client: SesClientLike; SendEmailCommand: any }> {
   const moduleName = '@aws-sdk/client-sesv2';
   let mod: any;
   try {

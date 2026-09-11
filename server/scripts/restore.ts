@@ -17,9 +17,7 @@ async function main(): Promise<void> {
     const keys = await listBackups();
     logger.info({ keys }, 'no key given — pass one of these to restore');
     process.stdout.write(
-      keys.length
-        ? `\nUsage: npm run restore -w server -- ${keys[0]}\n`
-        : '\nNo backups found.\n',
+      keys.length ? `\nUsage: npm run restore -w server -- ${keys[0]}\n` : '\nNo backups found.\n',
     );
     return;
   }

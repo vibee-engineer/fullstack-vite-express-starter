@@ -82,7 +82,11 @@ export function createPrismaFileRepository(): FileRepository {
         const row = await prisma.file.delete({ where: { id } });
         return toFile(row);
       } catch (err) {
-        if (typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2025') {
+        if (
+          typeof err === 'object' &&
+          err !== null &&
+          (err as { code?: string }).code === 'P2025'
+        ) {
           return null;
         }
         throw err;

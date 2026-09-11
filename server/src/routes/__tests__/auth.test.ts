@@ -13,10 +13,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import {
-  createMemoryAuthRepository,
-  setAuthRepository,
-} from '../../repositories/authRepository';
+import { createMemoryAuthRepository, setAuthRepository } from '../../repositories/authRepository';
 import { createApp } from '../../app';
 
 const app = createApp();
@@ -42,7 +39,11 @@ describe('POST /api/auth/register', () => {
       .send({ email: 'owner@example.com', password: 'password123', name: 'Owen' })
       .expect(201);
 
-    expect(res.body.user).toMatchObject({ email: 'owner@example.com', role: 'owner', name: 'Owen' });
+    expect(res.body.user).toMatchObject({
+      email: 'owner@example.com',
+      role: 'owner',
+      name: 'Owen',
+    });
     expect(res.body.user).not.toHaveProperty('passwordHash');
 
     const [cookie] = cookies(res);

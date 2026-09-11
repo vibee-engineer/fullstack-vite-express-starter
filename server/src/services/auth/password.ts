@@ -22,7 +22,10 @@ export async function hashPassword(plain: string): Promise<string> {
 }
 
 /** Verify a plaintext password against a stored hash. Never throws. */
-export async function verifyPassword(plain: string, stored: string | null | undefined): Promise<boolean> {
+export async function verifyPassword(
+  plain: string,
+  stored: string | null | undefined,
+): Promise<boolean> {
   if (!stored) return false;
   const parts = stored.split('$');
   if (parts.length !== 3 || parts[0] !== 'scrypt') return false;

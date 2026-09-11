@@ -47,7 +47,10 @@ function toMeta(file: StoredFile): FileMeta {
 
 /** Keep only a safe basename; strip any client-supplied path. Fallback: "file". */
 function sanitizeFilename(original: string): string {
-  const base = path.basename(original || '').replace(/[\u0000-\u001f]/g, '').trim();
+  const base = path
+    .basename(original || '')
+    .replace(/[\u0000-\u001f]/g, '')
+    .trim();
   return base.length > 0 ? base.slice(0, 255) : 'file';
 }
 

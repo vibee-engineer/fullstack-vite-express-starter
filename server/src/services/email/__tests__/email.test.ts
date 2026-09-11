@@ -28,12 +28,16 @@ describe('message validation', () => {
 
   it('rejects a message with no recipients / subject / body', () => {
     expect(() => assertValidMessage({ to: [], subject: 's', text: 't' })).toThrow(/recipient/i);
-    expect(() => assertValidMessage({ to: 'a@x.com', subject: '  ', text: 't' })).toThrow(/subject/i);
+    expect(() => assertValidMessage({ to: 'a@x.com', subject: '  ', text: 't' })).toThrow(
+      /subject/i,
+    );
     expect(() => assertValidMessage({ to: 'a@x.com', subject: 's' })).toThrow(/body/i);
   });
 
   it('accepts a valid message', () => {
-    expect(() => assertValidMessage({ to: 'a@x.com', subject: 's', html: '<p>h</p>' })).not.toThrow();
+    expect(() =>
+      assertValidMessage({ to: 'a@x.com', subject: 's', html: '<p>h</p>' }),
+    ).not.toThrow();
   });
 });
 
@@ -76,7 +80,10 @@ describe('ResendEmailDriver', () => {
 
     expect(res).toEqual({ id: 're_123' });
     const call = (fetchFn as unknown as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    const [url, init] = call as [string, { method: string; headers: Record<string, string>; body: string }];
+    const [url, init] = call as [
+      string,
+      { method: string; headers: Record<string, string>; body: string },
+    ];
     expect(url).toBe('https://api.resend.com/emails');
     expect(init.method).toBe('POST');
     expect(init.headers.Authorization).toBe('Bearer key_abc');

@@ -23,11 +23,7 @@ const prisma = new PrismaClient();
 // One RNG seeded by a stable string → the whole seed is reproducible.
 const rng = new SeededRandom('fullstack-starter-demo');
 
-const STATUS = [
-  ['done', 6] as const,
-  ['in_progress', 3] as const,
-  ['todo', 4] as const,
-];
+const STATUS = [['done', 6] as const, ['in_progress', 3] as const, ['todo', 4] as const];
 
 // Factory: each task gets a deterministic id, a human-shaped title, a weighted
 // status, and (below) a backdated createdAt so the list has real history.

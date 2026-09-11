@@ -7,7 +7,13 @@
  * RESEND_API_KEY + EMAIL_FROM.
  */
 
-import { assertValidMessage, recipients, type EmailMessage, type EmailSender, type SentEmail } from './message';
+import {
+  assertValidMessage,
+  recipients,
+  type EmailMessage,
+  type EmailSender,
+  type SentEmail,
+} from './message';
 
 type FetchFn = typeof fetch;
 

@@ -55,10 +55,7 @@ function binaryParser(res: any, cb: (err: Error | null, body: Buffer) => void): 
 
 describe('POST /api/files', () => {
   it('uploads a file and returns 201 FileMeta (no storageKey leaked)', async () => {
-    const res = await request(app)
-      .post('/api/files')
-      .attach('file', PNG, 'photo.png')
-      .expect(201);
+    const res = await request(app).post('/api/files').attach('file', PNG, 'photo.png').expect(201);
 
     expect(res.body).toMatchObject({
       filename: 'photo.png',

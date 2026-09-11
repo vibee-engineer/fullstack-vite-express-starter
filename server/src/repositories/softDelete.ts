@@ -26,9 +26,7 @@
 export const NOT_DELETED = { deletedAt: null } as const;
 
 /** Merge the not-deleted filter into a resource `where` (the default list view). */
-export function activeWhere<T extends Record<string, unknown>>(
-  where?: T,
-): T & { deletedAt: null } {
+export function activeWhere<T extends Record<string, unknown>>(where?: T): T & { deletedAt: null } {
   return { ...((where ?? {}) as T), deletedAt: null };
 }
 

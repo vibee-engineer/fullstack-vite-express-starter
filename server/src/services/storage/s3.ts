@@ -91,9 +91,7 @@ export class S3Driver implements StorageDriver {
 
   async delete(key: string): Promise<void> {
     const { client, commands } = await this.sdk();
-    await client.send(
-      new commands.DeleteObjectCommand({ Bucket: this.config.bucket, Key: key }),
-    );
+    await client.send(new commands.DeleteObjectCommand({ Bucket: this.config.bucket, Key: key }));
   }
 
   async exists(key: string): Promise<boolean> {
@@ -102,7 +100,8 @@ export class S3Driver implements StorageDriver {
       await client.send(new commands.HeadObjectCommand({ Bucket: this.config.bucket, Key: key }));
       return true;
     } catch (err) {
-      const status = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+      const status = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata
+        ?.httpStatusCode;
       const name = (err as { name?: string })?.name;
       if (status === 404 || name === 'NotFound' || name === 'NoSuchKey') return false;
       throw err;

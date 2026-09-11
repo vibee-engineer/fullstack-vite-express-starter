@@ -52,14 +52,16 @@ export function backdateSeries(
   const dates: Date[] = [];
   for (let i = 0; i < count; i += 1) {
     let position = rng.next(); // [0,1): 0 = oldest, 1 = newest
-    if (trend === 'growth') position = position ** 0.5; // bias toward recent
+    if (trend === 'growth')
+      position = position ** 0.5; // bias toward recent
     else if (trend === 'decline') position = 1 - position ** 0.5; // bias toward old
 
     let t = start + position * span;
     const d = new Date(t);
     if (businessDays) {
       const day = d.getUTCDay();
-      if (day === 0) t -= 2 * MS_PER_DAY; // Sunday -> Friday
+      if (day === 0)
+        t -= 2 * MS_PER_DAY; // Sunday -> Friday
       else if (day === 6) t -= MS_PER_DAY; // Saturday -> Friday
     }
     // clamp inside the window

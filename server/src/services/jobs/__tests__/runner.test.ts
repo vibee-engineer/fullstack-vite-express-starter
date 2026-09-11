@@ -48,7 +48,11 @@ describe('BackgroundRunner', () => {
   });
 
   it('respects the concurrency limit', async () => {
-    const runner = new BackgroundRunner({ concurrency: 2, logger: spyLogger(), sleep: instantSleep });
+    const runner = new BackgroundRunner({
+      concurrency: 2,
+      logger: spyLogger(),
+      sleep: instantSleep,
+    });
     const gates = [deferred(), deferred(), deferred(), deferred()];
     let peak = 0;
     gates.forEach((g, i) => {

@@ -26,7 +26,12 @@ let storage: LocalDiskDriver;
 
 /** Records every dump/restore call and returns a canned dump buffer. */
 function recordingRunner() {
-  const calls: { kind: 'dump' | 'restore'; args: string[]; env: NodeJS.ProcessEnv; input?: Buffer }[] = [];
+  const calls: {
+    kind: 'dump' | 'restore';
+    args: string[];
+    env: NodeJS.ProcessEnv;
+    input?: Buffer;
+  }[] = [];
   const runner: BackupRunner = {
     async dump(args, env) {
       calls.push({ kind: 'dump', args, env });
@@ -145,7 +150,11 @@ describe('restoreBackup', () => {
 describe('listBackups', () => {
   it('lists only backup dumps, newest first', async () => {
     // Write three backups at increasing timestamps + an unrelated file.
-    for (const ts of ['2026-01-01T00-00-00-000Z', '2026-06-01T00-00-00-000Z', '2026-03-01T00-00-00-000Z']) {
+    for (const ts of [
+      '2026-01-01T00-00-00-000Z',
+      '2026-06-01T00-00-00-000Z',
+      '2026-03-01T00-00-00-000Z',
+    ]) {
       await storage.save(`backups/backup-${ts}.dump`, Buffer.from('x'), 'application/octet-stream');
     }
     await storage.save('backups/readme.txt', Buffer.from('not a backup'), 'text/plain');

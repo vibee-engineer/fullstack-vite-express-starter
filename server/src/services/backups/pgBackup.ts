@@ -159,7 +159,12 @@ function requireDatabaseUrl(): string {
 // Default runner — real child processes
 // ---------------------------------------------------------------------------
 
-function run(command: string, args: string[], env: NodeJS.ProcessEnv, input?: Buffer): Promise<Buffer> {
+function run(
+  command: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  input?: Buffer,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { env });
     const out: Buffer[] = [];
@@ -171,7 +176,9 @@ function run(command: string, args: string[], env: NodeJS.ProcessEnv, input?: Bu
     );
     child.on('close', (code) => {
       if (code === 0) return resolve(Buffer.concat(out));
-      reject(new Error(`${command} exited ${code}: ${Buffer.concat(err).toString().slice(0, 500)}`));
+      reject(
+        new Error(`${command} exited ${code}: ${Buffer.concat(err).toString().slice(0, 500)}`),
+      );
     });
     if (input) {
       child.stdin.write(input);

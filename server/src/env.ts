@@ -28,7 +28,11 @@ const EnvSchema = z
     /** `local` (default, disk) or `s3` (S3/R2/any S3-compatible bucket). */
     STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
     /** Max accepted upload size in bytes. Default 10 MB. */
-    MAX_UPLOAD_BYTES: z.coerce.number().int().positive().default(10 * 1024 * 1024),
+    MAX_UPLOAD_BYTES: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(10 * 1024 * 1024),
     /** S3 driver config — required only when STORAGE_DRIVER=s3. */
     S3_BUCKET: z.string().optional(),
     S3_REGION: z.string().optional(),

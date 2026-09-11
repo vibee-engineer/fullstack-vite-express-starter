@@ -85,7 +85,9 @@ describe('LocalDiskDriver', () => {
   });
 
   it('refuses path-traversal keys (cannot escape baseDir)', async () => {
-    await expect(driver.save('../escape.txt', Buffer.from('x'), 'text/plain')).resolves.toBeUndefined();
+    await expect(
+      driver.save('../escape.txt', Buffer.from('x'), 'text/plain'),
+    ).resolves.toBeUndefined();
     // The traversal was stripped, so the file landed INSIDE dir, not above it.
     const parent = path.dirname(dir);
     await expect(stat(path.join(parent, 'escape.txt'))).rejects.toBeTruthy();

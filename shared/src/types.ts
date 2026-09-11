@@ -7,17 +7,8 @@
 
 import type { z } from 'zod';
 import type { CreateUserSchema, UserSchema, HealthSchema } from './schemas';
-import type {
-  IdParamSchema,
-  PaginationQuerySchema,
-  TrashQuerySchema,
-} from './schemas/common';
-import type {
-  AuthUserSchema,
-  UserRoleSchema,
-  RegisterSchema,
-  LoginSchema,
-} from './schemas/auth';
+import type { IdParamSchema, PaginationQuerySchema, TrashQuerySchema } from './schemas/common';
+import type { AuthUserSchema, UserRoleSchema, RegisterSchema, LoginSchema } from './schemas/auth';
 import type { FileMetaSchema, FileListSchema } from './schemas/file';
 import type {
   TaskSchema,

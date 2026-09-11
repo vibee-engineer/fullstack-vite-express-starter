@@ -21,7 +21,10 @@ export class LocalDiskDriver implements StorageDriver {
   private resolve(key: string): string {
     const root = path.resolve(this.baseDir);
     // Normalize, then strip any leading separators/traversal so join stays put.
-    const safe = path.normalize(key).replace(/^(\.\.(\/|\\|$))+/, '').replace(/^[/\\]+/, '');
+    const safe = path
+      .normalize(key)
+      .replace(/^(\.\.(\/|\\|$))+/, '')
+      .replace(/^[/\\]+/, '');
     const full = path.resolve(root, safe);
     if (full !== root && !full.startsWith(root + path.sep)) {
       throw new Error(`Unsafe storage key "${key}".`);

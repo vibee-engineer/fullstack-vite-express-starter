@@ -110,7 +110,9 @@ describe('register validation', () => {
     s.register({ name: 'a', everyMs: 1000, handler: () => {} });
     expect(s.size).toBe(1);
     s.start();
-    expect(() => s.register({ name: 'b', everyMs: 1000, handler: () => {} })).toThrow(/after start/);
+    expect(() => s.register({ name: 'b', everyMs: 1000, handler: () => {} })).toThrow(
+      /after start/,
+    );
     s.stop();
   });
 });

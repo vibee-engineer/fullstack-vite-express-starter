@@ -17,9 +17,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 process.env.MAX_UPLOAD_BYTES = '64';
 
 const { createApp } = await import('../../app');
-const { setFileRepository, createMemoryFileRepository } = await import(
-  '../../repositories/fileRepository'
-);
+const { setFileRepository, createMemoryFileRepository } =
+  await import('../../repositories/fileRepository');
 const { setStorage, LocalDiskDriver } = await import('../../services/storage');
 
 const app = createApp();

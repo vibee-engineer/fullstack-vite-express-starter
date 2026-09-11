@@ -83,7 +83,12 @@ describe('backdateSeries', () => {
 
   it('growth trend puts MORE rows in recent months than old ones', () => {
     const rng = new SeededRandom('grow');
-    const dates = backdateSeries(rng, 600, { monthsBack: 12, trend: 'growth', now, businessDays: false });
+    const dates = backdateSeries(rng, 600, {
+      monthsBack: 12,
+      trend: 'growth',
+      now,
+      businessDays: false,
+    });
     const buckets = monthlyBuckets(dates, 12, now);
     const oldHalf = buckets.slice(0, 6).reduce((s, n) => s + n, 0);
     const recentHalf = buckets.slice(6).reduce((s, n) => s + n, 0);
@@ -92,7 +97,12 @@ describe('backdateSeries', () => {
 
   it('decline trend inverts the bias', () => {
     const rng = new SeededRandom('decl');
-    const dates = backdateSeries(rng, 600, { monthsBack: 12, trend: 'decline', now, businessDays: false });
+    const dates = backdateSeries(rng, 600, {
+      monthsBack: 12,
+      trend: 'decline',
+      now,
+      businessDays: false,
+    });
     const buckets = monthlyBuckets(dates, 12, now);
     const oldHalf = buckets.slice(0, 6).reduce((s, n) => s + n, 0);
     const recentHalf = buckets.slice(6).reduce((s, n) => s + n, 0);
@@ -118,7 +128,9 @@ describe('Factory', () => {
   it('buildMany produces `count` timestamped rows', () => {
     const rng = new SeededRandom('f');
     const customers = defineFactory((r) => ({ name: r.fullName(), email: r.email() }));
-    const rows = customers.buildMany(rng, 150, { backdate: { monthsBack: 12, now, businessDays: false } });
+    const rows = customers.buildMany(rng, 150, {
+      backdate: { monthsBack: 12, now, businessDays: false },
+    });
     expect(rows).toHaveLength(150);
     expect(rows[0]!.name).toMatch(/\S+ \S+/);
     // backdated + ascending

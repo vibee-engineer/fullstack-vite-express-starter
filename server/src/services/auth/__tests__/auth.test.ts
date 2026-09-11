@@ -15,14 +15,7 @@ import {
   type AuthRepository,
 } from '../../../repositories/authRepository';
 import { hashPassword, verifyPassword, newSessionToken } from '../password';
-import {
-  login,
-  logout,
-  normalizeEmail,
-  register,
-  SESSION_TTL_MS,
-  verifySession,
-} from '../index';
+import { login, logout, normalizeEmail, register, SESSION_TTL_MS, verifySession } from '../index';
 
 let repo: AuthRepository;
 
@@ -92,16 +85,16 @@ describe('register', () => {
 
   it('rejects a duplicate email with EmailTakenError', async () => {
     await register({ email: 'dup@example.com', password: 'password123' });
-    await expect(register({ email: 'dup@example.com', password: 'otherpass1' })).rejects.toBeInstanceOf(
-      EmailTakenError,
-    );
+    await expect(
+      register({ email: 'dup@example.com', password: 'otherpass1' }),
+    ).rejects.toBeInstanceOf(EmailTakenError);
   });
 
   it('rejects a duplicate even across casing/whitespace', async () => {
     await register({ email: 'dup@example.com', password: 'password123' });
-    await expect(register({ email: ' DUP@Example.com ', password: 'password123' })).rejects.toBeInstanceOf(
-      EmailTakenError,
-    );
+    await expect(
+      register({ email: ' DUP@Example.com ', password: 'password123' }),
+    ).rejects.toBeInstanceOf(EmailTakenError);
   });
 
   it('does not persist a session for a rejected duplicate', async () => {
