@@ -13,6 +13,12 @@ import type {
   TrashQuerySchema,
 } from './schemas/common';
 import type {
+  AuthUserSchema,
+  UserRoleSchema,
+  RegisterSchema,
+  LoginSchema,
+} from './schemas/auth';
+import type {
   TaskSchema,
   TaskStatusSchema,
   CreateTaskSchema,
@@ -29,6 +35,12 @@ export type Health = z.infer<typeof HealthSchema>;
 export type IdParam = z.infer<typeof IdParamSchema>;
 export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
 export type TrashQuery = z.infer<typeof TrashQuerySchema>;
+
+/** Auth shapes — see shared/src/schemas/auth.ts. */
+export type AuthUser = z.infer<typeof AuthUserSchema>;
+export type UserRole = z.infer<typeof UserRoleSchema>;
+export type Register = z.infer<typeof RegisterSchema>;
+export type Login = z.infer<typeof LoginSchema>;
 
 /** Task — the reference resource. See shared/src/schemas/task.ts. */
 export type Task = z.infer<typeof TaskSchema>;

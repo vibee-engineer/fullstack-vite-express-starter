@@ -26,7 +26,11 @@
  * boot path loads.
  */
 
-const MODULES = ['../mongoose/models/Task.ts', '../mongoose/models/User.ts'];
+const MODULES = [
+  '../mongoose/models/Task.ts',
+  '../mongoose/models/User.ts',
+  '../mongoose/models/Session.ts',
+];
 
 let failed = 0;
 

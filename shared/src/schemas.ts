@@ -17,6 +17,7 @@
 import { z } from 'zod';
 
 export * from './schemas/common';
+export * from './schemas/auth';
 export * from './schemas/task';
 
 /** Example: user creation payload (POST body). */
