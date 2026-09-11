@@ -20,10 +20,19 @@ export function Topbar({
   title,
   actions,
   account,
+  showBrand = false,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
   account?: Account;
+  /**
+   * Anchor the left with the app Brand. AppShell sets this for the shells that
+   * have NO sidebar (canvas/focused) so the bar never collapses to a lone
+   * floating control when a page passes no title — that empty strip is what
+   * made generated apps look broken. The sidebar shell keeps it false (the rail
+   * already carries the brand).
+   */
+  showBrand?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -44,7 +53,19 @@ export function Topbar({
         </SheetContent>
       </Sheet>
 
-      {title ? (
+      {showBrand ? (
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Brand />
+          {title ? (
+            <>
+              <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
+              <h1 className="truncate text-base font-medium tracking-tight text-muted-foreground">
+                {title}
+              </h1>
+            </>
+          ) : null}
+        </div>
+      ) : title ? (
         <h1 className="truncate text-base font-semibold tracking-tight">{title}</h1>
       ) : (
         <span className="truncate text-base font-semibold tracking-tight md:hidden">
