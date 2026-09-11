@@ -14,8 +14,7 @@ const buttonVariants = cva(
       variant: {
         // Solid actions carry a subtle elevation that lifts a touch on hover —
         // the "this is the primary thing" cue, not a flat rectangle.
-        default:
-          'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm',
+        default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm',
         destructive:
           'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 hover:shadow-sm',
         outline:
@@ -36,8 +35,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 

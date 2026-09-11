@@ -82,7 +82,8 @@ export function KanbanBoard<T>({
   // Fast lookup from card id -> { item, columnId } off the source-of-truth props.
   const index = useMemo(() => {
     const map = new Map<string, { item: T; columnId: string }>();
-    for (const col of columns) for (const item of col.items) map.set(itemKey(item), { item, columnId: col.id });
+    for (const col of columns)
+      for (const item of col.items) map.set(itemKey(item), { item, columnId: col.id });
     return map;
   }, [columns, itemKey]);
 
@@ -105,8 +106,7 @@ export function KanbanBoard<T>({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const columnOf = (id: string) =>
-    layout.find((c) => c.id === id || c.itemIds.includes(id))?.id;
+  const columnOf = (id: string) => layout.find((c) => c.id === id || c.itemIds.includes(id))?.id;
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
@@ -126,7 +126,9 @@ export function KanbanBoard<T>({
       const toCol = next.find((c) => c.id === to)!;
       fromCol.itemIds = fromCol.itemIds.filter((id) => id !== activeCardId);
       const overIsColumn = toCol.id === overId;
-      const insertAt = overIsColumn ? toCol.itemIds.length : Math.max(0, toCol.itemIds.indexOf(overId));
+      const insertAt = overIsColumn
+        ? toCol.itemIds.length
+        : Math.max(0, toCol.itemIds.indexOf(overId));
       toCol.itemIds.splice(insertAt, 0, activeCardId);
       return next;
     });
@@ -152,7 +154,9 @@ export function KanbanBoard<T>({
       const fromCol = next.find((c) => c.itemIds.includes(activeCardId))!;
       fromCol.itemIds = fromCol.itemIds.filter((id) => id !== activeCardId);
       const overIsColumn = toCol.id === overId;
-      const insertAt = overIsColumn ? toCol.itemIds.length : Math.max(0, toCol.itemIds.indexOf(overId));
+      const insertAt = overIsColumn
+        ? toCol.itemIds.length
+        : Math.max(0, toCol.itemIds.indexOf(overId));
       toCol.itemIds.splice(insertAt, 0, activeCardId);
       onMove?.(activeCardId, to, insertAt);
       return next;

@@ -16,13 +16,7 @@ import type { Account } from './account';
  * left rail. Below md the destinations collapse into the SAME SidebarNav
  * Sheet used by every other shell. Composed BY AppShell.
  */
-export function TopbarNav({
-  actions,
-  account,
-}: {
-  actions?: ReactNode;
-  account?: Account;
-}) {
+export function TopbarNav({ actions, account }: { actions?: ReactNode; account?: Account }) {
   const [open, setOpen] = useState(false);
 
   return (

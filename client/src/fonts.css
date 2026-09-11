@@ -10,13 +10,19 @@
  * Playfair, a dev tool in Space Grotesk, a friendly consumer app in Plus Jakarta.
  *
  * The families here map to the design reference's domain -> type guidance:
- *   Sans  : Inter, Plus Jakarta Sans, DM Sans, IBM Plex Sans, Manrope
+ *   Sans  : Inter, Geist, Plus Jakarta Sans, DM Sans, IBM Plex Sans, Manrope
  *   Serif : Fraunces, Playfair Display, Lora  (editorial / luxury / warmth)
  *   Display grotesque: Space Grotesk           (dev tools / technical)
- *   Mono  : JetBrains Mono, IBM Plex Mono       (figures, code, dev tools)
+ *   Mono  : Geist Mono, JetBrains Mono, IBM Plex Mono  (figures, code, dev tools)
+ *
+ * Geist + Geist Mono are the Vercel/Linear-class superfamily: pairing Geist Sans
+ * for display with Geist Mono for numerals reproduces the funded-dev-tool look
+ * with a single family. They are the highest-leverage type choice for developer,
+ * fintech and analytics apps — a distinct display face with mono figures is what
+ * separates an art-directed dashboard from the shadcn/Inter default.
  *
  * @import MUST be the first statement in the stylesheet — this file is imported
  * before anything else in index.css. To add a family, extend the URL below and
  * it becomes available to --font-* immediately.
  */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Fraunces:opsz,wght@9..144,400..700&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
