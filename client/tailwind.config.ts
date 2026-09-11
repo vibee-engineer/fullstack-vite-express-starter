@@ -101,6 +101,15 @@ const config: Config = {
         body: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
+      // Optical tracking scale from the funded-app type spec. Headings tighten as
+      // they grow; all-caps eyebrows need positive tracking. Use on display text.
+      letterSpacing: {
+        tightest: '-0.03em', // hero numbers / display
+        tighter: '-0.021em', // h1
+        tight: '-0.015em', // h2/h3
+        normal: '0',
+        wide: '0.06em', // ALL-CAPS labels / eyebrows
+      },
       keyframes: {
         'accordion-down': {
           from: { height: '0' },

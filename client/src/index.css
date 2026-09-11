@@ -84,6 +84,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Let opsz faces (Fraunces, Inter Display, DM Sans) pick their optical cut. */
+  font-optical-sizing: auto;
 }
 
 body {
@@ -92,9 +94,21 @@ body {
     'cv02','cv03','cv04','cv11'; /* nicer digits/letterforms where the face supports them */
 }
 
-/* Tabular numerals wherever numbers are compared (tables, stats, counts). */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
+/* Headings get tight negative tracking by default — the single craft detail that
+ * reads "art-directed" instead of "browser default". Utilities (tracking-*)
+ * still override per element. Values from the funded-app type spec: hero -0.03em,
+ * h1 -0.02em, h2/h3 -0.015em. */
+h1 { letter-spacing: -0.021em; }
+h2, h3 { letter-spacing: -0.015em; }
+
+/* Tabular, lining numerals wherever numbers are COMPARED — every table cell,
+ * KPI, price, axis and timestamp. Proportional/oldstyle figures make columns of
+ * numbers jitter; that wandering is the single biggest "amateur" tell on a data
+ * app. `tabular-nums` only affects digits, so text columns are untouched. */
+.tabular-nums,
+table,
+[data-numeric] {
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /* Reduced-motion users get the state changes without the movement. */
