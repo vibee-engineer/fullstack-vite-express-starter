@@ -1,37 +1,42 @@
 /**
- * seed.ts — idempotent database seed. Runs via `npm run db:seed -w server`.
- * Every seed operation is an `upsert` so re-runs are safe.
+ * seed.ts — idempotent demo-data seed. Runs via `npm run db:seed -w server`.
  *
- * Tasks use a fixed `id` rather than a natural key because `Task` has no
- * unique business column — that's the pattern to copy when a resource has
- * nothing unique to key on.
+ * THE PATTERN TO COPY: do NOT hand-type a handful of rows — that is the "toy
+ * dashboard" tell ($854 MRR, 6 subscribers, flat charts). Generate realistic,
+ * BACKDATED demo data with the seed engine (@/services/seed):
+ *   - a deterministic seeded RNG → reproducible data, so re-seeding is safe;
+ *   - a factory → hundreds of coherent rows in a few lines;
+ *   - backdateSeries → `createdAt` spread across the last 12 months, so
+ *     "activity over time" charts and period-over-period deltas are REAL.
+ *
+ * Idempotency: ids are derived from the deterministic RNG, so re-runs
+ * `skipDuplicates` instead of piling up copies. Copy this shape for your real
+ * resources; scale `count` to the domain (a SaaS seeds hundreds of signups; a
+ * solo plumber seeds dozens of jobs — realistic FOR THE BUSINESS).
  */
 import { PrismaClient } from '@prisma/client';
 
+import { SeededRandom, defineFactory } from '../src/services/seed';
+
 const prisma = new PrismaClient();
 
-const TASKS = [
-  {
-    id: 'seed-task-1',
-    title: 'Read the reference vertical',
-    description:
-      'Task is wired end to end: shared/src/schemas/task.ts → prisma + mongoose models → ' +
-      'repositories/taskRepository.ts → routes/tasks.ts → client/src/api/tasks.ts → TasksPage.',
-    status: 'done' as const,
-  },
-  {
-    id: 'seed-task-2',
-    title: 'Copy the shape for your first real resource',
-    description: 'Schema first, then model + migration, then repository, then routes, then client.',
-    status: 'in_progress' as const,
-  },
-  {
-    id: 'seed-task-3',
-    title: 'Delete the Task resource once you no longer need the example',
-    description: 'It is a demo, not a dependency. Nothing else in the starter imports it.',
-    status: 'todo' as const,
-  },
+// One RNG seeded by a stable string → the whole seed is reproducible.
+const rng = new SeededRandom('fullstack-starter-demo');
+
+const STATUS = [
+  ['done', 6] as const,
+  ['in_progress', 3] as const,
+  ['todo', 4] as const,
 ];
+
+// Factory: each task gets a deterministic id, a human-shaped title, a weighted
+// status, and (below) a backdated createdAt so the list has real history.
+const taskFactory = defineFactory((r) => ({
+  id: r.id('task'),
+  title: `${r.phrase(2)} — ${r.company()}`.replace(/\b\w/g, (c) => c.toUpperCase()),
+  description: r.bool(0.6) ? `${r.phrase(3)} for ${r.fullName()} (${r.city()})` : null,
+  status: r.weighted(STATUS),
+}));
 
 async function main() {
   await prisma.user.upsert({
@@ -40,15 +45,25 @@ async function main() {
     create: { email: 'demo@example.com', name: 'Demo User' },
   });
 
-  for (const task of TASKS) {
-    await prisma.task.upsert({
-      where: { id: task.id },
-      update: { title: task.title, description: task.description, status: task.status },
-      create: task,
-    });
-  }
+  // 48 backdated tasks across the last 12 months, trending up. `createdAt` is
+  // set explicitly to override the model's @default(now()); `updatedAt` is
+  // managed by Prisma (@updatedAt).
+  const tasks = taskFactory.buildMany(rng, 48, {
+    backdate: { monthsBack: 12, trend: 'growth' },
+  });
 
-  console.log(`Seed complete: 1 user, ${TASKS.length} tasks.`);
+  const result = await prisma.task.createMany({
+    data: tasks.map((t) => ({
+      id: t.id,
+      title: t.title,
+      description: t.description,
+      status: t.status,
+      createdAt: t.createdAt,
+    })),
+    skipDuplicates: true,
+  });
+
+  console.log(`Seed complete: 1 user, ${result.count} tasks (backdated across 12 months).`);
 }
 
 main()
