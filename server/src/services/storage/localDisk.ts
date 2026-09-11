@@ -8,7 +8,7 @@
  */
 
 import { createReadStream } from 'node:fs';
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
 
@@ -58,6 +58,27 @@ export class LocalDiskDriver implements StorageDriver {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    // `prefix` names a directory under baseDir (e.g. "backups"). Walk it and
+    // return keys relative to baseDir, using forward slashes to match how keys
+    // are written. A missing directory is an empty list, not an error.
+    const cleaned = prefix.replace(/\/+$/, '');
+    const root = path.resolve(this.baseDir);
+    const dir = cleaned ? this.resolve(cleaned) : root;
+    try {
+      const entries = await readdir(dir, { withFileTypes: true, recursive: true });
+      return entries
+        .filter((e) => e.isFile())
+        .map((e) => {
+          const abs = path.join(e.parentPath, e.name);
+          return path.relative(root, abs).split(path.sep).join('/');
+        });
+    } catch {
+      // Missing directory → empty list.
+      return [];
     }
   }
 }

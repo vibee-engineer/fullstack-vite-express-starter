@@ -71,6 +71,19 @@ describe('LocalDiskDriver', () => {
     expect(await driver.exists('nested/deep/file.txt')).toBe(true);
   });
 
+  it('lists keys under a prefix (forward-slashed, recursive)', async () => {
+    await driver.save('backups/backup-1.dump', Buffer.from('a'), 'application/octet-stream');
+    await driver.save('backups/backup-2.dump', Buffer.from('b'), 'application/octet-stream');
+    await driver.save('other/x.txt', Buffer.from('c'), 'text/plain');
+
+    const keys = (await driver.list('backups')).sort();
+    expect(keys).toEqual(['backups/backup-1.dump', 'backups/backup-2.dump']);
+  });
+
+  it('list returns an empty array for a missing prefix', async () => {
+    expect(await driver.list('does-not-exist')).toEqual([]);
+  });
+
   it('refuses path-traversal keys (cannot escape baseDir)', async () => {
     await expect(driver.save('../escape.txt', Buffer.from('x'), 'text/plain')).resolves.toBeUndefined();
     // The traversal was stripped, so the file landed INSIDE dir, not above it.

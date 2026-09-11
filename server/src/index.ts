@@ -1,5 +1,6 @@
 import { createApp } from './app';
 import { env, isPostgres, isMongo, skipDb } from './env';
+import { registerBackupJob } from './services/backups';
 import { registerJobs, runner, scheduler } from './services/jobs';
 import { logger } from './logger';
 
@@ -35,6 +36,8 @@ async function main() {
 
   // Recurring jobs. Empty by default; see server/src/services/jobs.
   registerJobs();
+  // Daily Postgres backup, if BACKUP_DAILY_AT is set. See services/backups.
+  registerBackupJob(scheduler);
   scheduler.start();
 
   const shutdown = async (signal: string) => {

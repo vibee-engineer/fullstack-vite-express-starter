@@ -46,6 +46,14 @@ const EnvSchema = z
     RESEND_API_KEY: z.string().optional(),
     /** Required when EMAIL_DRIVER=ses. Needs @aws-sdk/client-sesv2 installed. */
     SES_REGION: z.string().optional(),
+
+    // ── Backups (see server/src/services/backups) ───────────────────────────
+    /** Storage-key prefix backups live under. Default `backups`. */
+    BACKUP_PREFIX: z.string().default('backups'),
+    /** How many recent backups to keep; older ones are pruned. Default 7. */
+    BACKUP_RETENTION: z.coerce.number().int().positive().default(7),
+    /** Local time "HH:MM" for the daily backup job. Unset = no scheduled backup. */
+    BACKUP_DAILY_AT: z.string().optional(),
   })
   .refine((v) => skipDbRequested(v) || Boolean(v.DATABASE_URL || v.MONGO_URL), {
     message:

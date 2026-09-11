@@ -19,4 +19,10 @@ export interface StorageDriver {
   /** Remove the object. Idempotent: deleting a missing key is not an error. */
   delete(key: string): Promise<void>;
   exists(key: string): Promise<boolean>;
+  /**
+   * List keys under `prefix` (e.g. "backups/"). Returns full keys, unsorted.
+   * An absent prefix yields an empty list, never an error. Used by the backups
+   * service for retention; not needed for the upload flow.
+   */
+  list(prefix: string): Promise<string[]>;
 }

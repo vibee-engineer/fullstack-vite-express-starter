@@ -108,5 +108,26 @@ export class S3Driver implements StorageDriver {
       throw err;
     }
   }
+
+  async list(prefix: string): Promise<string[]> {
+    const { client, commands } = await this.sdk();
+    const keys: string[] = [];
+    let token: string | undefined;
+    // Page through every object under the prefix.
+    do {
+      const res = await client.send(
+        new commands.ListObjectsV2Command({
+          Bucket: this.config.bucket,
+          Prefix: prefix,
+          ContinuationToken: token,
+        }),
+      );
+      for (const obj of res.Contents ?? []) {
+        if (obj.Key) keys.push(obj.Key);
+      }
+      token = res.IsTruncated ? res.NextContinuationToken : undefined;
+    } while (token);
+    return keys;
+  }
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
