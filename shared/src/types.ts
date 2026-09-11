@@ -8,6 +8,11 @@
 import type { z } from 'zod';
 import type { CreateUserSchema, UserSchema, HealthSchema } from './schemas';
 import type {
+  IdParamSchema,
+  PaginationQuerySchema,
+  TrashQuerySchema,
+} from './schemas/common';
+import type {
   TaskSchema,
   TaskStatusSchema,
   CreateTaskSchema,
@@ -19,6 +24,11 @@ import type {
 export type CreateUser = z.infer<typeof CreateUserSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type Health = z.infer<typeof HealthSchema>;
+
+/** Reusable common shapes — see shared/src/schemas/common.ts. */
+export type IdParam = z.infer<typeof IdParamSchema>;
+export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
+export type TrashQuery = z.infer<typeof TrashQuerySchema>;
 
 /** Task — the reference resource. See shared/src/schemas/task.ts. */
 export type Task = z.infer<typeof TaskSchema>;
