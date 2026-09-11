@@ -168,7 +168,9 @@ export function CommandPaletteTrigger({ onClick }: { onClick: () => void }): Rea
     >
       <Search className="h-3.5 w-3.5" />
       <span>Search</span>
-      <kbd className="rounded border border-border bg-background px-1 font-mono text-[10px]">⌘K</kbd>
+      <kbd className="rounded border border-border bg-background px-1 font-mono text-[10px]">
+        ⌘K
+      </kbd>
     </button>
   );
 }

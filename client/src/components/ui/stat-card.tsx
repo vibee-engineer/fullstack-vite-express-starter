@@ -24,7 +24,9 @@ import { Sparkline, type ChartDatum } from '@/components/ui/chart';
 
 function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
   );
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -103,14 +105,16 @@ export function StatCard({
   const counted = useCountUp(isNumber ? (value as number) : 0);
 
   // colour = whether the move is GOOD; arrow = the raw direction of the move.
-  const isGood = direction === 'up' ? higherIsBetter : direction === 'down' ? !higherIsBetter : null;
+  const isGood =
+    direction === 'up' ? higherIsBetter : direction === 'down' ? !higherIsBetter : null;
   const deltaPill =
     isGood === null
       ? 'bg-muted text-muted-foreground'
       : isGood
         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
         : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
-  const ArrowIcon = direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
+  const ArrowIcon =
+    direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
   const sparkTone = isGood === null ? 'accent' : isGood ? 'positive' : 'negative';
 
   return (

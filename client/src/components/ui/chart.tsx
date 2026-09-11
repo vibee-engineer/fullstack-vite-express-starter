@@ -124,7 +124,8 @@ function formatterFor(fmt: ValueFormat, compact: boolean, currency = 'USD') {
   return (n: number) => {
     if (n == null || Number.isNaN(n)) return '';
     if (fmt === 'percent') return `${n.toFixed(1)}%`;
-    if (fmt === 'currency') return compact ? formatCompactCurrency(n, currency) : formatCurrency(n, currency);
+    if (fmt === 'currency')
+      return compact ? formatCompactCurrency(n, currency) : formatCurrency(n, currency);
     return compact ? formatCompactNumber(n) : new Intl.NumberFormat('en-US').format(n);
   };
 }
@@ -142,7 +143,11 @@ function ChartTooltip({
   xFormat,
 }: {
   active?: boolean;
-  payload?: Array<{ value?: number | string | (number | string)[]; name?: string; dataKey?: string | number }>;
+  payload?: Array<{
+    value?: number | string | (number | string)[];
+    name?: string;
+    dataKey?: string | number;
+  }>;
   label?: string | number;
   tokens: ResolvedTokens;
   valueFmt: (n: number) => string;
@@ -161,7 +166,9 @@ function ChartTooltip({
         minWidth: 120,
       }}
     >
-      <div style={{ color: tokens['--muted-foreground'], fontSize: 12, marginBottom: 3 }}>{heading}</div>
+      <div style={{ color: tokens['--muted-foreground'], fontSize: 12, marginBottom: 3 }}>
+        {heading}
+      </div>
       {payload.map((p, i) => (
         <div
           key={i}
@@ -297,7 +304,12 @@ export function Chart({
                 stroke={accents[i % accents.length]}
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, fill: accents[i % accents.length], stroke: tokens['--card'], strokeWidth: 2 }}
+                activeDot={{
+                  r: 4,
+                  fill: accents[i % accents.length],
+                  stroke: tokens['--card'],
+                  strokeWidth: 2,
+                }}
                 connectNulls={false}
                 isAnimationActive
                 animationDuration={600}
@@ -327,7 +339,12 @@ export function Chart({
                 strokeWidth={2}
                 fill={`url(#${gradId}-${i})`}
                 dot={false}
-                activeDot={{ r: 4, fill: accents[i % accents.length], stroke: tokens['--card'], strokeWidth: 2 }}
+                activeDot={{
+                  r: 4,
+                  fill: accents[i % accents.length],
+                  stroke: tokens['--card'],
+                  strokeWidth: 2,
+                }}
                 connectNulls={false}
                 isAnimationActive
                 animationDuration={600}

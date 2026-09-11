@@ -43,9 +43,7 @@ export function ListDetail({
       >
         {list}
       </div>
-      <div
-        className={cn('min-h-0 flex-1 overflow-y-auto', selected ? 'block' : 'hidden md:block')}
-      >
+      <div className={cn('min-h-0 flex-1 overflow-y-auto', selected ? 'block' : 'hidden md:block')}>
         {detail}
       </div>
     </div>

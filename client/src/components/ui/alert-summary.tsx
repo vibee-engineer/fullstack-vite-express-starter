@@ -119,15 +119,12 @@ function AlertBanner({ alert }: { alert: AlertItem }) {
   );
 }
 
-export function AlertSummary({
-  alerts,
-  className,
-}: {
-  alerts: AlertItem[];
-  className?: string;
-}) {
+export function AlertSummary({ alerts, className }: { alerts: AlertItem[]; className?: string }) {
   const [open, setOpen] = useState(false);
-  const blocking = useMemo(() => alerts.find((a) => a.blocking && a.level === 'critical'), [alerts]);
+  const blocking = useMemo(
+    () => alerts.find((a) => a.blocking && a.level === 'critical'),
+    [alerts],
+  );
   const rest = useMemo(() => alerts.filter((a) => a !== blocking), [alerts, blocking]);
   const groups = useMemo(() => groupAlerts(rest), [rest]);
 
@@ -176,7 +173,9 @@ export function AlertSummary({
             </button>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-[min(24rem,90vw)] p-0">
-            <div className="border-b border-border px-3 py-2.5 text-sm font-semibold">Notifications</div>
+            <div className="border-b border-border px-3 py-2.5 text-sm font-semibold">
+              Notifications
+            </div>
             <div className="max-h-[24rem] overflow-y-auto py-1">
               {groups.map((g) => {
                 const meta = LEVEL_META[g.level];

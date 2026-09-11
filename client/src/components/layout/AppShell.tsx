@@ -52,7 +52,9 @@ export function AppShell({
   // The inner content wrapper. 'clamped' gets a readable max-width; 'fluid'
   // fills. (Ignored by focused/canvas, which own their own width.)
   const contentClass =
-    contentWidth === 'clamped' ? 'mx-auto w-full max-w-5xl px-4 py-6 md:px-6' : 'w-full px-4 py-6 md:px-6';
+    contentWidth === 'clamped'
+      ? 'mx-auto w-full max-w-5xl px-4 py-6 md:px-6'
+      : 'w-full px-4 py-6 md:px-6';
 
   if (archetype === 'focused') {
     return (
@@ -80,10 +82,13 @@ export function AppShell({
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <TopbarNav actions={headerActions} account={account} />
         <main className="flex-1 overflow-y-auto">
-          <div className={cn('mx-auto w-full max-w-7xl px-4 py-6 md:px-6', contentWidth === 'clamped' && 'max-w-3xl')}>
-            {title ? (
-              <h1 className="mb-4 text-2xl font-semibold tracking-tight">{title}</h1>
-            ) : null}
+          <div
+            className={cn(
+              'mx-auto w-full max-w-7xl px-4 py-6 md:px-6',
+              contentWidth === 'clamped' && 'max-w-3xl',
+            )}
+          >
+            {title ? <h1 className="mb-4 text-2xl font-semibold tracking-tight">{title}</h1> : null}
             {children}
           </div>
         </main>
