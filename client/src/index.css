@@ -17,6 +17,9 @@
  * system was dead.
  *
  * Do not move this below the @tailwind directives again. */
+/* fonts.css first: its @import must precede every other statement (see the note
+ * in fonts.css). Then tokens.css, then Tailwind. */
+@import './fonts.css';
 @import './tokens.css';
 
 @tailwind base;

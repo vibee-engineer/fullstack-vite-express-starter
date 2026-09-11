@@ -7,7 +7,12 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { TasksPage } from '@/pages/TasksPage';
 
 /**
- * Route table. Add new routes here as children of the AppShell layout route.
+ * Route table. Authenticated pages are children of the AppShell layout route
+ * (AppShell composes the shell from LAYOUT in @/config/site). PUBLIC routes
+ * (sign in / sign up / marketing) go OUTSIDE this layout route and use
+ * AuthLayout — see @/components/layout/AuthLayout — so a signed-out user is
+ * never shown a sidebar full of links that 401.
+ *
  * The `errorElement` catches thrown responses (React Router v7 error boundary
  * semantics) so a bad fetch inside a loader doesn't blank the whole app.
  */

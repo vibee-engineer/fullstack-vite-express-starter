@@ -41,6 +41,13 @@
 
   --radius: 0.5rem;
 
+  /* Typography. Families must exist in fonts.css (or a system stack). The token
+   * service picks display/body/mono per app so typography varies by domain
+   * instead of every app rendering in the same sans. */
+  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
   /* Chart series. A dashboard with no chart library and no chart tokens is why
    * generated apps rendered hand-rolled Progress bars for aggregate metrics.
    * regenerate_tokens overwrites these to match the brand palette. */
