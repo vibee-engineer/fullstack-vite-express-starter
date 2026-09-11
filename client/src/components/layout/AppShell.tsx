@@ -57,7 +57,7 @@ export function AppShell({
   if (archetype === 'focused') {
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <Topbar title={title} actions={headerActions} account={account} />
+        <Topbar title={title} actions={headerActions} account={account} showBrand />
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-3xl px-4 py-10 md:px-6">{children}</div>
         </main>
@@ -68,7 +68,7 @@ export function AppShell({
   if (archetype === 'canvas') {
     return (
       <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-        <Topbar title={title} actions={headerActions} account={account} />
+        <Topbar title={title} actions={headerActions} account={account} showBrand />
         {/* Full-bleed, non-scrolling: the canvas inside owns scroll/pan. */}
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>

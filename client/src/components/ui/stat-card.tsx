@@ -45,23 +45,48 @@ export function StatCard({
         ? 'text-rose-600 dark:text-rose-400'
         : 'text-muted-foreground';
   const TrendIcon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : null;
+  const deltaPill =
+    trend === 'up'
+      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+      : trend === 'down'
+        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+        : 'bg-muted text-muted-foreground';
 
   return (
-    <div className={cn('rounded-lg border border-border bg-card p-5 text-card-foreground', className)}>
-      <div className="flex items-center justify-between">
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-xl border border-border bg-card p-5 text-card-foreground shadow-xs transition-shadow duration-200 ease-out hover:shadow-md',
+        className,
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
         <div className="text-sm font-medium text-muted-foreground">{label}</div>
-        {Icon ? <Icon className="h-4 w-4 text-muted-foreground/70" /> : null}
+        {Icon ? (
+          // Icon sits in a brand-tinted chip, not a faint grey glyph in the void.
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+        ) : null}
       </div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <div className="font-heading text-3xl font-semibold leading-none tracking-tight tabular-nums">
+          {value}
+        </div>
         {delta ? (
-          <span className={cn('inline-flex items-center gap-0.5 text-xs font-medium', trendColor)}>
+          // Delta as a coloured pill reads at a glance; the arrow reinforces the
+          // direction. `trend` is semantic, so "churn +2%" can still read red.
+          <span
+            className={cn(
+              'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums',
+              deltaPill,
+            )}
+          >
             {TrendIcon ? <TrendIcon className="h-3 w-3" /> : null}
             {delta}
           </span>
         ) : null}
       </div>
-      {hint ? <div className="mt-1 text-xs text-muted-foreground">{hint}</div> : null}
+      {hint ? <div className="mt-1.5 text-xs text-muted-foreground">{hint}</div> : null}
     </div>
   );
 }

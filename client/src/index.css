@@ -26,6 +26,60 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------------------------------------------------------------------------
+ * STATIC design-system layer.
+ *
+ * Everything here is app-INDEPENDENT: the elevation ramp, motion vocabulary,
+ * and focus treatment that make the UI read premium regardless of the brand
+ * palette. It lives in index.css ON PURPOSE — `regenerate_tokens` rewrites
+ * tokens.css per app (colours, fonts, charts), so these must NOT live there or
+ * they'd be wiped on turn 1. Colours vary per app; this quality floor does not.
+ *
+ * ELEVATION — layered, single-light-source, HUE-TINTED shadows (not flat grey).
+ * Offset ≈ 2× the blur's horizontal spread; as a surface rises the offset and
+ * blur grow while each layer's opacity drops. Tinting the shadow with the
+ * surface hue (via --shadow-color) is what separates a real product from a
+ * bootstrap card. Ref: Josh Comeau "Designing Shadows" + Material elevation.
+ *
+ * MOTION — one easing/duration vocabulary so every component moves the same
+ * way. ease-out for entrances, ease-in for exits, spring for playful presses.
+ * Envelope 100–260ms (NN/g: <500ms, never linear except spinners).
+ * ------------------------------------------------------------------------- */
+:root {
+  /* cool ink tint so shadows feel like they belong to the surface, not soot */
+  --shadow-color: 220 45% 20%;
+  --shadow-xs: 0 1px 2px -1px hsl(var(--shadow-color) / 0.1);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 2px 4px -1px hsl(var(--shadow-color) / 0.07);
+  --shadow-md: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 8px -2px hsl(var(--shadow-color) / 0.08),
+    0 8px 16px -4px hsl(var(--shadow-color) / 0.06);
+  --shadow-lg: 0 2px 4px hsl(var(--shadow-color) / 0.05), 0 8px 16px -4px hsl(var(--shadow-color) / 0.08),
+    0 16px 32px -8px hsl(var(--shadow-color) / 0.12);
+  --shadow-xl: 0 4px 8px hsl(var(--shadow-color) / 0.06), 0 16px 32px -8px hsl(var(--shadow-color) / 0.12),
+    0 32px 64px -16px hsl(var(--shadow-color) / 0.18);
+  /* a soft accent glow for primary/interactive emphasis (uses the brand hue) */
+  --shadow-focus: 0 0 0 3px hsl(var(--ring) / 0.35);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+}
+
+.dark {
+  /* In dark, elevation is carried mostly by LIGHTER surfaces (see tokens.css
+   * where --card sits above --background); shadows go near-black + deeper so
+   * overlays (menus, dialogs) still detach from the page. */
+  --shadow-color: 0 0% 0%;
+  --shadow-xs: 0 1px 2px -1px hsl(var(--shadow-color) / 0.4);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.3), 0 2px 4px -1px hsl(var(--shadow-color) / 0.35);
+  --shadow-md: 0 2px 4px hsl(var(--shadow-color) / 0.35), 0 4px 12px -2px hsl(var(--shadow-color) / 0.45);
+  --shadow-lg: 0 4px 8px hsl(var(--shadow-color) / 0.4), 0 12px 28px -6px hsl(var(--shadow-color) / 0.55);
+  --shadow-xl: 0 8px 16px hsl(var(--shadow-color) / 0.45), 0 24px 56px -12px hsl(var(--shadow-color) / 0.65);
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -34,6 +88,25 @@ html {
 
 body {
   @apply bg-background text-foreground font-body;
+  font-feature-settings:
+    'cv02','cv03','cv04','cv11'; /* nicer digits/letterforms where the face supports them */
+}
+
+/* Tabular numerals wherever numbers are compared (tables, stats, counts). */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduced-motion users get the state changes without the movement. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Ensure Radix portals inherit theme tokens. */

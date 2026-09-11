@@ -62,9 +62,35 @@ const config: Config = {
         },
       },
       borderRadius: {
+        '2xl': 'calc(var(--radius) + 8px)',
+        xl: 'calc(var(--radius) + 4px)',
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      // Elevation ramp (defined in index.css so it survives token reseeding).
+      // Overrides Tailwind's defaults, so every existing `shadow-sm`/`shadow-md`
+      // in the shadcn primitives upgrades to the tinted, layered ramp for free.
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        DEFAULT: 'var(--shadow-md)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+        focus: 'var(--shadow-focus)',
+        none: 'none',
+      },
+      transitionTimingFunction: {
+        out: 'var(--ease-out)',
+        in: 'var(--ease-in)',
+        'in-out': 'var(--ease-in-out)',
+        spring: 'var(--ease-spring)',
+      },
+      transitionDuration: {
+        fast: 'var(--dur-fast)',
+        DEFAULT: 'var(--dur)',
+        slow: 'var(--dur-slow)',
       },
       fontFamily: {
         // Read the CSS-variable font tokens (defined in tokens.css, chosen per
@@ -84,10 +110,34 @@ const config: Config = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        // Opt-in micro-interactions. Apply where motion COMMUNICATES (content
+        // arriving, a value changing, drag feedback) — not as decoration. Skip
+        // entirely when the app doesn't call for it.
+        'fade-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'fade-in-up': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'scale-in': {
+          from: { opacity: '0', transform: 'scale(0.97)' },
+          to: { opacity: '1', transform: 'scale(1)' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+        'drop-flash': {
+          '0%': { backgroundColor: 'hsl(var(--ring) / 0.16)' },
+          '100%': { backgroundColor: 'transparent' },
+        },
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
+        'accordion-down': 'accordion-down 0.2s var(--ease-out)',
+        'accordion-up': 'accordion-up 0.2s var(--ease-out)',
+        'fade-in': 'fade-in var(--dur) var(--ease-out)',
+        'fade-in-up': 'fade-in-up var(--dur-slow) var(--ease-out)',
+        'scale-in': 'scale-in var(--dur) var(--ease-out)',
+        shimmer: 'shimmer 1.5s infinite',
+        'drop-flash': 'drop-flash 700ms cubic-bezier(0.25,0.1,0.25,1)',
       },
     },
   },
