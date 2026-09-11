@@ -68,7 +68,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.end}
+                end={item.end ?? item.to === '/'}
                 onClick={onNavigate}
                 className={({ isActive }) =>
                   cn(
@@ -80,7 +80,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 }
               >
                 <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
-                <span className="truncate">{item.label}</span>
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.badge != null ? (
+                  <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums text-muted-foreground group-hover:bg-background">
+                    {item.badge}
+                  </span>
+                ) : null}
               </NavLink>
             ),
           )}
@@ -111,7 +116,7 @@ export function TopbarNavLinks({ onNavigate }: { onNavigate?: () => void }) {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.end}
+            end={item.end ?? item.to === '/'}
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
