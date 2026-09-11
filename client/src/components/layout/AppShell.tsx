@@ -5,9 +5,9 @@ import { cn } from '@/lib/utils';
 import { AppSidebar } from './AppSidebar';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
-import type { Account } from './nav';
+import type { Account } from './account';
 
-export type { Account } from './nav';
+export type { Account } from './account';
 
 /**
  * AppShell — the chrome around every AUTHENTICATED page. It composes ONE of

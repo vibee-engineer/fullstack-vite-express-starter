@@ -4,7 +4,11 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { AccountMenu, Brand, SidebarNav, TopbarNavLinks, type Account } from './nav';
+import { AccountMenu } from './AccountMenu';
+import { Brand } from './Brand';
+import { SidebarNav } from './SidebarNav';
+import { TopbarNavLinks } from './TopbarNavLinks';
+import type { Account } from './account';
 
 /**
  * TopbarNav — the horizontal top navigation bar for the 'topbar' archetype:

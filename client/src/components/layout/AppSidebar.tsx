@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 
-import { AccountMenu, Brand, SidebarNav, type Account } from './nav';
+import { AccountMenu } from './AccountMenu';
+import { Brand } from './Brand';
+import { SidebarNav } from './SidebarNav';
+import type { Account } from './account';
 
 /**
  * AppSidebar — the persistent left rail for the 'sidebar' archetype. Hidden

@@ -1,0 +1,22 @@
+/* fonts.css — a curated set of web fonts, ALWAYS loaded, so tokens.css can pick
+ * any of them per app via --font-display / --font-body / --font-mono without a
+ * network-dependent build step.
+ *
+ * Why this exists: without it every generated app rendered in the same system
+ * sans (Inter was named in the config but never loaded), so typography — half
+ * of a design's identity — was identical across every app. founding.dev's token
+ * service now chooses display/body/mono families from THIS set to fit each app's
+ * domain: a fintech dashboard in IBM Plex, an editorial app in Fraunces or
+ * Playfair, a dev tool in Space Grotesk, a friendly consumer app in Plus Jakarta.
+ *
+ * The families here map to the design reference's domain -> type guidance:
+ *   Sans  : Inter, Plus Jakarta Sans, DM Sans, IBM Plex Sans, Manrope
+ *   Serif : Fraunces, Playfair Display, Lora  (editorial / luxury / warmth)
+ *   Display grotesque: Space Grotesk           (dev tools / technical)
+ *   Mono  : JetBrains Mono, IBM Plex Mono       (figures, code, dev tools)
+ *
+ * @import MUST be the first statement in the stylesheet — this file is imported
+ * before anything else in index.css. To add a family, extend the URL below and
+ * it becomes available to --font-* immediately.
+ */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&family=Fraunces:opsz,wght@9..144,400..700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');

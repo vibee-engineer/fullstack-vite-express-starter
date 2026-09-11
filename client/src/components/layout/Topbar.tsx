@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { SITE } from '@/config/site';
-import { AccountMenu, Brand, SidebarNav, type Account } from './nav';
+import { AccountMenu } from './AccountMenu';
+import { Brand } from './Brand';
+import { SidebarNav } from './SidebarNav';
+import type { Account } from './account';
 
 /**
  * Topbar — the slim horizontal bar at the top of the 'sidebar' and 'canvas'

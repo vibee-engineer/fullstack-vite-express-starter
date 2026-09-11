@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { SITE } from '@/config/site';
-import { Brand } from './nav';
+import { Brand } from './Brand';
 
 /**
  * AuthLayout — a centered card for PUBLIC routes (sign in, sign up, reset).
