@@ -86,6 +86,38 @@ describe('POST /api/auth/register', () => {
   });
 });
 
+describe('session cookie in the cross-site preview iframe (X-Forwarded-Proto: https)', () => {
+  // The preview proxy forwards X-Forwarded-Proto=https and embeds the app in a
+  // cross-site iframe. The cookie must then be SameSite=None; Secure; Partitioned
+  // (CHIPS) or it is never sent inside the iframe and login silently fails.
+  it('register over forwarded-https emits None; Secure; Partitioned', async () => {
+    const res = await request(app)
+      .post('/api/auth/register')
+      .set('X-Forwarded-Proto', 'https')
+      .send({ email: 'chips@example.com', password: 'password123' })
+      .expect(201);
+    const [cookie] = cookies(res);
+    expect(cookie).toMatch(/SameSite=None/i);
+    expect(cookie).toMatch(/Secure/i);
+    expect(cookie).toMatch(/Partitioned/i);
+    expect(cookie).toMatch(/HttpOnly/i);
+  });
+
+  it('login over forwarded-https emits None; Secure; Partitioned', async () => {
+    await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'chips2@example.com', password: 'password123' });
+    const res = await request(app)
+      .post('/api/auth/login')
+      .set('X-Forwarded-Proto', 'https')
+      .send({ email: 'chips2@example.com', password: 'password123' })
+      .expect(200);
+    const [cookie] = cookies(res);
+    expect(cookie).toMatch(/SameSite=None/i);
+    expect(cookie).toMatch(/Partitioned/i);
+  });
+});
+
 describe('POST /api/auth/login', () => {
   beforeEach(async () => {
     await request(app)
