@@ -71,6 +71,90 @@ export function backdateSeries(
   return dates.sort((a, b) => a.getTime() - b.getTime());
 }
 
+export interface ScheduleOptions {
+  /** How far back the window reaches (already-happened events). Default 14. */
+  daysBack?: number;
+  /** How far forward the window reaches (upcoming events). Default 21. */
+  daysForward?: number;
+  /**
+   * Fraction of rows dated today-or-later. Default 0.55 — a scheduling view
+   * leans upcoming, but keeps recent history so "past appointments" isn't empty
+   * either.
+   */
+  upcomingRatio?: number;
+  /** Nudge weekend rows onto the nearest Friday (fewer weekend events). Default true. */
+  businessDays?: boolean;
+  /** Reference "now"; injectable for deterministic tests. Default new Date(). */
+  now?: Date;
+}
+
+const clampNum = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+
+/**
+ * Timestamps for SCHEDULED / dated events (deliveries, appointments, due dates,
+ * shifts, reservations) spread across `[now - daysBack, now + daysForward]`,
+ * SORTED ASCENDING, with a GUARANTEED row today so a "today" or "this week" view
+ * is never empty.
+ *
+ * This is the counterpart to `backdateSeries`. Use backdate for HISTORICAL
+ * fields (`createdAt`) so charts have real trend; use schedule for FORWARD-LOOKING
+ * date fields (`dueDate`, `appointmentAt`, `deliveryDate`, `eventDate`,
+ * `startsAt`) — otherwise every row lands in the past and the app's PRIMARY
+ * screen ("today's deliveries", "upcoming appointments") opens empty, the exact
+ * "No X scheduled for today" barren tell.
+ */
+export function scheduleSeries(
+  rng: SeededRandom,
+  count: number,
+  opts: ScheduleOptions = {},
+): Date[] {
+  const {
+    daysBack = 14,
+    daysForward = 21,
+    upcomingRatio = 0.55,
+    businessDays = true,
+    now = new Date(),
+  } = opts;
+  if (count <= 0) return [];
+
+  const nowMs = now.getTime();
+  const backStart = nowMs - Math.max(0, daysBack) * MS_PER_DAY;
+  const fwdEnd = nowMs + Math.max(0, daysForward) * MS_PER_DAY;
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const upcomingCount = Math.round(count * clampNum(upcomingRatio, 0, 1));
+
+  const nudgeBusinessDay = (t: number): number => {
+    if (!businessDays) return t;
+    const day = new Date(t).getUTCDay();
+    if (day === 0) return t + MS_PER_DAY; // Sunday -> Monday (forward, so events stay upcoming)
+    if (day === 6) return t - MS_PER_DAY; // Saturday -> Friday
+    return t;
+  };
+
+  const dates: Date[] = [];
+  for (let i = 0; i < count; i += 1) {
+    let t: number;
+    if (i === 0) {
+      // Anchor (counts toward the upcoming allocation): a business-hour time
+      // TODAY, so the "today" view always has at least one row.
+      t = startOfToday.getTime() + (8 + rng.int(0, 9)) * 60 * 60 * 1000; // 08:00–17:00 today
+    } else if (i < upcomingCount) {
+      // Upcoming: [now, fwdEnd], denser near now (soon-first) via position^1.5.
+      const p = rng.next() ** 1.5;
+      t = nudgeBusinessDay(nowMs + p * (fwdEnd - nowMs));
+    } else {
+      // Recent past: [backStart, now).
+      const p = rng.next();
+      t = nudgeBusinessDay(backStart + p * (nowMs - backStart));
+    }
+    dates.push(new Date(clampNum(t, backStart, fwdEnd)));
+  }
+
+  return dates.sort((a, b) => a.getTime() - b.getTime());
+}
+
 /**
  * Bucket dates into `monthsBack` monthly counts, oldest first — the shape a
  * "last N months" chart consumes. Useful in tests to assert the trend is real.

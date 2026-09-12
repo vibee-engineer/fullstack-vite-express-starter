@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { SeededRandom } from '../random';
-import { backdateSeries, monthlyBuckets } from '../backdate';
+import { backdateSeries, scheduleSeries, monthlyBuckets } from '../backdate';
 import { defineFactory, Factory } from '../factory';
 
 describe('SeededRandom — determinism', () => {
@@ -119,6 +119,61 @@ describe('backdateSeries', () => {
 
   it('is a no-op for count <= 0', () => {
     expect(backdateSeries(new SeededRandom('z'), 0)).toEqual([]);
+  });
+});
+
+describe('scheduleSeries — forward-dated events never leave "today" empty', () => {
+  const now = new Date('2026-06-15T12:00:00.000Z'); // a Monday
+  const startOfToday = (() => {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  })();
+  const endOfToday = startOfToday + 24 * 60 * 60 * 1000 - 1;
+
+  it('returns `count` dates, sorted ascending, inside [now-daysBack, now+daysForward]', () => {
+    const rng = new SeededRandom('sch');
+    const dates = scheduleSeries(rng, 200, { daysBack: 14, daysForward: 21, now });
+    expect(dates).toHaveLength(200);
+    const lo = now.getTime() - 14 * 24 * 60 * 60 * 1000;
+    const hi = now.getTime() + 21 * 24 * 60 * 60 * 1000;
+    for (let i = 0; i < dates.length; i += 1) {
+      expect(dates[i]!.getTime()).toBeGreaterThanOrEqual(lo);
+      expect(dates[i]!.getTime()).toBeLessThanOrEqual(hi);
+      if (i > 0) expect(dates[i]!.getTime()).toBeGreaterThanOrEqual(dates[i - 1]!.getTime());
+    }
+  });
+
+  it('ALWAYS places at least one row today (the barren-primary-screen fix)', () => {
+    // Every count, even small ones, must have a "today" row.
+    for (const count of [1, 3, 8, 50]) {
+      const dates = scheduleSeries(new SeededRandom(`t${count}`), count, { now });
+      const today = dates.filter((d) => d.getTime() >= startOfToday && d.getTime() <= endOfToday);
+      expect(today.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('populates BOTH upcoming (>= now) and recent past (< now)', () => {
+    const dates = scheduleSeries(new SeededRandom('mix'), 100, {
+      now,
+      upcomingRatio: 0.55,
+    });
+    const upcoming = dates.filter((d) => d.getTime() >= now.getTime()).length;
+    const past = dates.filter((d) => d.getTime() < now.getTime()).length;
+    expect(upcoming).toBeGreaterThan(0);
+    expect(past).toBeGreaterThan(0);
+    // leans upcoming, but not all-or-nothing
+    expect(upcoming).toBeGreaterThan(past);
+  });
+
+  it('is deterministic (same seed + now → same series)', () => {
+    const a = scheduleSeries(new SeededRandom('det'), 40, { now });
+    const b = scheduleSeries(new SeededRandom('det'), 40, { now });
+    expect(a.map((d) => d.getTime())).toEqual(b.map((d) => d.getTime()));
+  });
+
+  it('is a no-op for count <= 0', () => {
+    expect(scheduleSeries(new SeededRandom('z'), 0)).toEqual([]);
   });
 });
 
