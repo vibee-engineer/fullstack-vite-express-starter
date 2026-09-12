@@ -50,6 +50,45 @@ type KanbanBoardProps<T> = {
   className?: string;
 };
 
+export type ColLayout = { id: string; itemIds: string[] };
+
+/**
+ * Where to drop the active card inside a destination column given what it's
+ * hovering. Dropping on the column body appends; dropping on a card inserts
+ * before or after it based on whether the dragged card's top crossed the target
+ * card's midline — so a card can land at the very bottom of a column, which a
+ * plain `indexOf` (always "before the hovered card") can't express.
+ *
+ * `toItemIds` must already have the active card removed, so indices refer to the
+ * post-removal array. Exported (with primitive args, no dnd-kit event) so the
+ * placement math is unit-testable without a synthetic DragEvent.
+ */
+export function resolveInsertIndex(
+  toColId: string,
+  toItemIds: string[],
+  overId: string,
+  activeTop?: number,
+  overRect?: { top: number; height: number },
+): number {
+  if (toColId === overId) return toItemIds.length; // dropped on the column body, not a card
+  const overIndex = toItemIds.indexOf(overId);
+  if (overIndex === -1) return toItemIds.length;
+  const isBelow =
+    activeTop != null && overRect ? activeTop > overRect.top + overRect.height / 2 : false;
+  return overIndex + (isBelow ? 1 : 0);
+}
+
+/** True when two layouts hold the same columns in the same order with the same cards. */
+export function sameLayout(a: ColLayout[], b: ColLayout[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (col, i) =>
+      col.id === b[i]!.id &&
+      col.itemIds.length === b[i]!.itemIds.length &&
+      col.itemIds.every((id, j) => id === b[i]!.itemIds[j]),
+  );
+}
+
 /**
  * KanbanBoard — columns of cards for objects that move through stages (deals,
  * issues, orders, applicants). Pass `onMove` to get real drag-and-drop:
@@ -95,6 +134,11 @@ export function KanbanBoard<T>({
   );
   const [layout, setLayout] = useState(propLayout);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Measured width of the grabbed card, applied to the DragOverlay clone so the
+  // lifted card is exactly the size of the one it left behind — otherwise it
+  // pops to a hardcoded width on grab and snaps again on drop (the old `w-64`
+  // was narrower than the real card, which reads as the "clunky" size jump).
+  const [activeWidth, setActiveWidth] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!activeId) setLayout(propLayout);
@@ -110,6 +154,8 @@ export function KanbanBoard<T>({
 
   function onDragStart(e: DragStartEvent) {
     setActiveId(String(e.active.id));
+    const w = e.active.rect.current.initial?.width;
+    if (w) setActiveWidth(w);
   }
 
   function onDragOver(e: DragOverEvent) {
@@ -118,19 +164,28 @@ export function KanbanBoard<T>({
     if (!overId) return;
     const from = columnOf(activeCardId);
     const to = columnOf(overId);
+    // Same-column reordering is previewed by verticalListSortingStrategy (it
+    // shifts the siblings live) and committed in onDragEnd — mutating `layout`
+    // here too would fight the strategy. So onDragOver only handles the
+    // cross-column hand-off.
     if (!from || !to || from === to) return;
-    // Move the card into the column it's hovering, at the hovered position.
     setLayout((prev) => {
       const next = prev.map((c) => ({ ...c, itemIds: [...c.itemIds] }));
       const fromCol = next.find((c) => c.id === from)!;
       const toCol = next.find((c) => c.id === to)!;
       fromCol.itemIds = fromCol.itemIds.filter((id) => id !== activeCardId);
-      const overIsColumn = toCol.id === overId;
-      const insertAt = overIsColumn
-        ? toCol.itemIds.length
-        : Math.max(0, toCol.itemIds.indexOf(overId));
+      const insertAt = resolveInsertIndex(
+        toCol.id,
+        toCol.itemIds,
+        overId,
+        e.active.rect.current.translated?.top,
+        e.over?.rect,
+      );
       toCol.itemIds.splice(insertAt, 0, activeCardId);
-      return next;
+      // Equality guard: dragOver fires on every pointer move, so bail out with
+      // the SAME array reference when the order is unchanged — otherwise the
+      // whole board re-renders on every mousemove and the drag visibly stutters.
+      return sameLayout(prev, next) ? prev : next;
     });
   }
 
@@ -138,29 +193,50 @@ export function KanbanBoard<T>({
     const activeCardId = String(e.active.id);
     const overId = e.over ? String(e.over.id) : null;
     setActiveId(null);
+    setActiveWidth(undefined);
+    // Dropped outside any droppable — snap back to the prop order.
     if (!overId) {
       setLayout(propLayout);
       return;
     }
-    const to = columnOf(overId);
+    // `over` can resolve to the DRAGGED CARD itself at drop — most often in
+    // keyboard DnD, where after an arrow move the collision target is the card
+    // in its new slot. That is NOT a no-op: the card may have crossed columns
+    // during the live drag. Treat "over === active" as "commit where the card
+    // now sits" — columnOf(active) is its transient column — instead of
+    // reverting, which would silently throw away a real move.
+    const to = columnOf(overId) ?? columnOf(activeCardId);
     if (!to) {
       setLayout(propLayout);
       return;
     }
-    // Compute final placement within the destination column.
-    setLayout((prev) => {
-      const next = prev.map((c) => ({ ...c, itemIds: [...c.itemIds] }));
-      const toCol = next.find((c) => c.id === to)!;
+    // Compute final placement from the CURRENT layout, then commit. `onMove` is
+    // a side effect (parent setState), so it must run AFTER setLayout and never
+    // inside the updater — React StrictMode double-invokes updaters to check
+    // purity, which would fire `onMove` twice. This unifies the same-column
+    // arrayMove and the cross-column drop through one index resolver so both
+    // honor the pointer's top/bottom-half position over the target card.
+    const next = layout.map((c) => ({ ...c, itemIds: [...c.itemIds] }));
+    const toCol = next.find((c) => c.id === to)!;
+    let finalIndex: number;
+    if (overId === activeCardId) {
+      // Over is the dragged card itself (common in keyboard DnD): it already
+      // sits in `to` at its live-drag slot — commit that index as-is.
+      finalIndex = Math.max(0, toCol.itemIds.indexOf(activeCardId));
+    } else {
       const fromCol = next.find((c) => c.itemIds.includes(activeCardId))!;
       fromCol.itemIds = fromCol.itemIds.filter((id) => id !== activeCardId);
-      const overIsColumn = toCol.id === overId;
-      const insertAt = overIsColumn
-        ? toCol.itemIds.length
-        : Math.max(0, toCol.itemIds.indexOf(overId));
-      toCol.itemIds.splice(insertAt, 0, activeCardId);
-      onMove?.(activeCardId, to, insertAt);
-      return next;
-    });
+      finalIndex = resolveInsertIndex(
+        toCol.id,
+        toCol.itemIds,
+        overId,
+        e.active.rect.current.translated?.top,
+        e.over?.rect,
+      );
+      toCol.itemIds.splice(finalIndex, 0, activeCardId);
+    }
+    setLayout(next);
+    onMove?.(activeCardId, to, finalIndex);
   }
 
   const activeItem = activeId ? index.get(activeId)?.item : undefined;
@@ -209,13 +285,22 @@ export function KanbanBoard<T>({
       onDragEnd={onDragEnd}
       onDragCancel={() => {
         setActiveId(null);
+        setActiveWidth(undefined);
         setLayout(propLayout);
       }}
     >
       {board}
-      <DragOverlay dropAnimation={{ duration: 220, easing: 'cubic-bezier(0.18,0.67,0.6,1.22)' }}>
+      {/*
+        Drop animation: a plain decelerate curve (no overshoot). The old
+        cubic-bezier ended at 1.22, so the card flew PAST its slot and snapped
+        back — the "bad transition" on drop. 200ms ease-out lands it cleanly.
+      */}
+      <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' }}>
         {activeItem && activeColumnId ? (
-          <div className="w-64 rotate-[1deg] cursor-grabbing opacity-100 shadow-lg">
+          <div
+            style={{ width: activeWidth }}
+            className="rotate-[1.5deg] cursor-grabbing opacity-100 shadow-xl"
+          >
             {renderCard(activeItem, activeColumnId)}
           </div>
         ) : null}
