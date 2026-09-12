@@ -14,11 +14,15 @@
  * resources; scale `count` to the domain (a SaaS seeds hundreds of signups; a
  * solo plumber seeds dozens of jobs — realistic FOR THE BUSINESS).
  */
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
 import { SeededRandom, defineFactory } from '../src/services/seed';
 
-const prisma = new PrismaClient();
+// Prisma 7: the client connects via a driver adapter, not a schema `url`.
+// The seed runs as a standalone script (npm run db:seed) with DATABASE_URL set.
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 // One RNG seeded by a stable string → the whole seed is reproducible.
 const rng = new SeededRandom('fullstack-starter-demo');
