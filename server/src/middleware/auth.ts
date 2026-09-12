@@ -59,27 +59,60 @@ export function readSessionCookie(cookieHeader: string | undefined): string | nu
 }
 
 /**
- * Write the session cookie. httpOnly + SameSite=Lax + Secure-in-production is
- * the safe default for a first-party app. `maxAge` matches the server-side TTL.
+ * Session-cookie attributes, chosen from the REQUEST's forwarded protocol —
+ * never from NODE_ENV.
+ *
+ * WHY NOT NODE_ENV: the founding.dev preview serves this app in DEV mode
+ * (NODE_ENV=development) behind an HTTPS proxy, embedded in a CROSS-SITE iframe
+ * (the app is on *.preview.foundingdev.com; the shell is on founding.dev). A
+ * `SameSite=Lax` cookie is not sent on a cross-site subframe request, so a
+ * NODE_ENV-gated cookie ships `Lax` into the preview and login silently fails
+ * there while working in a new tab (first-party) — the exact tell-tale
+ * asymmetry seen across several apps.
+ *
+ * OVER HTTPS we emit `SameSite=None; Secure; Partitioned` (CHIPS): the cookie
+ * is stored in a partition keyed to the top-level site, so it rides inside the
+ * preview iframe (Chromium + Firefox) without becoming an ambient third-party
+ * cookie. The proxy sets `X-Forwarded-Proto: https`, so that header — not
+ * NODE_ENV — is the signal. Over plain HTTP (local `docker compose` dev on
+ * localhost) we keep `Lax`: `SameSite=None` requires `Secure`, and a
+ * non-localhost HTTP origin cannot set a Secure cookie.
+ *
+ * CAVEAT: Safari/ITP may still drop a partitioned third-party cookie. The
+ * durable cross-browser fix is serving the preview same-site under
+ * *.founding.dev (a platform change), after which this naturally falls back to
+ * plain `Lax`. `partitioned` needs Express >= 4.21 (cookie >= 0.7).
  */
-export function setSessionCookie(res: Response, token: string): void {
-  res.cookie(SESSION_COOKIE, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
-    path: '/',
-    maxAge: SESSION_TTL_MS,
-  });
+function sessionCookieOptions(res: Response): {
+  httpOnly: true;
+  sameSite: 'none' | 'lax';
+  secure: boolean;
+  path: '/';
+  partitioned?: boolean;
+} {
+  const fwd = res.req?.headers['x-forwarded-proto'];
+  const raw = Array.isArray(fwd) ? fwd[0] : fwd;
+  const proto = (String(raw ?? '').split(',')[0] ?? '').trim().toLowerCase();
+  const isHttps = proto === 'https' || res.req?.secure === true;
+  return isHttps
+    ? { httpOnly: true, sameSite: 'none', secure: true, partitioned: true, path: '/' }
+    : { httpOnly: true, sameSite: 'lax', secure: false, path: '/' };
 }
 
-/** Clear the session cookie (logout). Must mirror the attributes above. */
+/**
+ * Write the session cookie. Attributes come from `sessionCookieOptions` (see
+ * there for the cross-site-preview reasoning). `maxAge` matches the TTL.
+ */
+export function setSessionCookie(res: Response, token: string): void {
+  res.cookie(SESSION_COOKIE, token, { ...sessionCookieOptions(res), maxAge: SESSION_TTL_MS });
+}
+
+/**
+ * Clear the session cookie (logout). Must mirror the SET attributes — a browser
+ * only removes a cookie when name + path + SameSite/Secure/Partitioned match.
+ */
 export function clearSessionCookie(res: Response): void {
-  res.clearCookie(SESSION_COOKIE, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: env.NODE_ENV === 'production',
-    path: '/',
-  });
+  res.clearCookie(SESSION_COOKIE, sessionCookieOptions(res));
 }
 
 /**
