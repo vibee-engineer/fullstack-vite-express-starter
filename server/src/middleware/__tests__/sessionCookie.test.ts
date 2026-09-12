@@ -97,6 +97,11 @@ describe('session cookie attributes follow the forwarded protocol', () => {
     const { res, clears } = mockRes({ 'x-forwarded-proto': 'https' });
     clearSessionCookie(res);
     expect(clears[0]!.name).toBe(SESSION_COOKIE);
-    expect(clears[0]!.opts).toMatchObject({ sameSite: 'none', secure: true, partitioned: true, path: '/' });
+    expect(clears[0]!.opts).toMatchObject({
+      sameSite: 'none',
+      secure: true,
+      partitioned: true,
+      path: '/',
+    });
   });
 });
