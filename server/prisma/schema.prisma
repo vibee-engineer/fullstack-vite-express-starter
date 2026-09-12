@@ -7,7 +7,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7: the connection URL no longer lives in the schema. Migrate/CLI
+  // reads it from prisma.config.ts (datasource.url); the runtime client gets a
+  // driver adapter (@prisma/adapter-pg) in src/db/prisma.ts. See prisma.config.ts.
 }
 
 /// Auth roles. `owner` = the business owner (full access); `staff` = invited user.
