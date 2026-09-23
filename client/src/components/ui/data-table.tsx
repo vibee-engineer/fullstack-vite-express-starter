@@ -67,7 +67,7 @@ export function DataTable<T extends Record<string, unknown>>({
   // Normalise once: `accessorKey` → `key`. Everything below reads `cols`.
   const cols = useMemo<Array<Column<T> & { key: string }>>(
     () =>
-      cols.map((c) => ({
+      columns.map((c) => ({
         ...c,
         key: c.key ?? c.accessorKey ?? '',
       })),
@@ -86,7 +86,9 @@ export function DataTable<T extends Record<string, unknown>>({
     for (const col of cols) {
       if (col.render || col.accessor) continue;
       if (!col.key) {
-        console.error('[DataTable] a column has neither `key` nor `accessorKey`; its cells will be blank.');
+        console.error(
+          '[DataTable] a column has neither `key` nor `accessorKey`; its cells will be blank.',
+        );
         continue;
       }
       if (!(col.key in sample)) {
