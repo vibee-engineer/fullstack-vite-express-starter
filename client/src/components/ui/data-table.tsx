@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ArrowUpDown, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -15,7 +15,15 @@ import { EmptyState } from '@/components/ui/empty-state';
 
 export type Column<T> = {
   /** unique key; also the object key used for default sort/search if no accessor */
-  key: string;
+  key?: string;
+  /**
+   * TanStack-style alias for `key`. Accepted so a column written as
+   * `{ accessorKey: 'Referrer', header: 'Referrer' }` renders instead of
+   * producing a table of blank cells — the single most repeated authoring
+   * mistake against this component (three builds in one day, 2026-09-23).
+   * Normalised into `key` on entry; `key` wins when both are given.
+   */
+  accessorKey?: string;
   header: ReactNode;
   /** cell renderer; defaults to String(row[key]) */
   render?: (row: T) => ReactNode;
@@ -43,7 +51,7 @@ export function DataTable<T extends Record<string, unknown>>({
   empty,
   className,
 }: {
-  columns: Column<T>[];
+  columns: Array<Column<T>>;
   data: T[];
   searchable?: boolean;
   /** which columns to search; defaults to all columns */
@@ -56,6 +64,43 @@ export function DataTable<T extends Record<string, unknown>>({
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{ key: string; dir: 'asc' | 'desc' } | null>(null);
 
+  // Normalise once: `accessorKey` → `key`. Everything below reads `cols`.
+  const cols = useMemo<Array<Column<T> & { key: string }>>(
+    () =>
+      columns.map((c) => ({
+        ...c,
+        key: c.key ?? c.accessorKey ?? '',
+      })),
+    [columns],
+  );
+
+  // Dev-only: a column whose key matches no field on the rows renders blank
+  // cells while the header looks fine — the failure is invisible in the UI and
+  // invisible to the type checker once `as any` is involved. Say it where the
+  // pre-finish console scan will see it. Runs when columns or data change, not
+  // on every render.
+  useEffect(() => {
+    if (!import.meta.env.DEV || data.length === 0) return;
+    const sample = data[0] as Record<string, unknown>;
+    const available = Object.keys(sample);
+    for (const col of cols) {
+      if (col.render || col.accessor) continue;
+      if (!col.key) {
+        console.error(
+          '[DataTable] a column has neither `key` nor `accessorKey`; its cells will be blank.',
+        );
+        continue;
+      }
+      if (!(col.key in sample)) {
+        console.error(
+          `[DataTable] column key "${col.key}" matches no field on the rows — its cells will be blank. ` +
+            `Available fields: ${available.map((k) => `"${k}"`).join(', ')}. ` +
+            'Use the exact field name (row keys are case- and space-sensitive), or pass `render`/`accessor`.',
+        );
+      }
+    }
+  }, [cols, data]);
+
   const valueOf = (row: T, col?: Column<T>) => {
     if (col?.accessor) return col.accessor(row);
     const key = col?.key;
@@ -65,10 +110,10 @@ export function DataTable<T extends Record<string, unknown>>({
   const filtered = useMemo(() => {
     if (!searchable || !query.trim()) return data;
     const q = query.toLowerCase();
-    const keys = searchKeys ?? columns.map((c) => c.key);
+    const keys = searchKeys ?? cols.map((c) => c.key);
     return data.filter((row) =>
       keys.some((k) => {
-        const col = columns.find((c) => c.key === k);
+        const col = cols.find((c) => c.key === k);
         return String(valueOf(row, col) ?? '')
           .toLowerCase()
           .includes(q);
@@ -79,7 +124,7 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const sorted = useMemo(() => {
     if (!sort) return filtered;
-    const col = columns.find((c) => c.key === sort.key);
+    const col = cols.find((c) => c.key === sort.key);
     const arr = [...filtered].sort((a, b) => {
       const av = valueOf(a, col);
       const bv = valueOf(b, col);
@@ -117,7 +162,7 @@ export function DataTable<T extends Record<string, unknown>>({
         <Table>
           <TableHeader>
             <TableRow>
-              {columns.map((col) => (
+              {cols.map((col) => (
                 <TableHead key={col.key} className={cn(alignClass(col.align), col.className)}>
                   {col.sortable ? (
                     <button
@@ -150,7 +195,7 @@ export function DataTable<T extends Record<string, unknown>>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={onRowClick ? 'cursor-pointer' : undefined}
               >
-                {columns.map((col) => (
+                {cols.map((col) => (
                   <TableCell key={col.key} className={cn(alignClass(col.align), col.className)}>
                     {col.render ? col.render(row) : String(row[col.key] ?? '')}
                   </TableCell>
