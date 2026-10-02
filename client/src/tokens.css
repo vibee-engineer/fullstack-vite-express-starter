@@ -22,6 +22,10 @@
 
   --primary: 222.2 47.4% 11.2%;
   --primary-foreground: 210 40% 98%;
+  /* --primary is a FILL; --primary-ink is the same hue solved for TEXT and icons
+   * (links, active nav, icon tiles on bg-primary/10). The default navy already
+   * reads, so the two are equal here; a seeded brand gets its own solved ink. */
+  --primary-ink: 222.2 47.4% 11.2%;
 
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
@@ -76,6 +80,7 @@
 
   --primary: 210 30% 96%;
   --primary-foreground: 224 44% 7%;
+  --primary-ink: 210 30% 96%;
 
   --secondary: 223 26% 15%;
   --secondary-foreground: 210 30% 96%;

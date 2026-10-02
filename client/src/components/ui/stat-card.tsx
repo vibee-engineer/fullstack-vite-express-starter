@@ -127,7 +127,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-3">
         <div className="text-sm font-medium text-muted-foreground">{label}</div>
         {Icon ? (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary-ink">
             <Icon className="h-[18px] w-[18px]" />
           </span>
         ) : null}

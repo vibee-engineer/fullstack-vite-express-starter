@@ -35,7 +35,7 @@ export function HomePage() {
               <li>Public entrypoint (via nginx): http://localhost:8888</li>
               <li>
                 Reference CRUD vertical:{' '}
-                <Link to="/tasks" className="text-primary underline-offset-4 hover:underline">
+                <Link to="/tasks" className="text-primary-ink underline-offset-4 hover:underline">
                   /tasks
                 </Link>{' '}
                 — copy that shape for every new resource.

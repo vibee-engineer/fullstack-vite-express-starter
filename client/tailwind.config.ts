@@ -35,6 +35,10 @@ const config: Config = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          // Brand hue solved for TEXT on every surface, including bg-primary/10
+          // (founding.dev's token generator solves it per app). The fallback
+          // keeps an older tokens.css without the var rendering as before.
+          ink: 'hsl(var(--primary-ink, var(--primary)))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
