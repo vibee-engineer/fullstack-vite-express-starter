@@ -22,6 +22,9 @@ const EnvSchema = z
      */
     SKIP_DB: z.string().optional(),
 
+    // ── Auth brute-force protection (see middleware/rate-limit.ts) ──────────
+    /** Failed login/register attempts allowed per client per 15 minutes. */
+    AUTH_RATE_LIMIT: z.coerce.number().int().positive().default(10),
     // ── File uploads (see server/src/services/storage) ──────────────────────
     /** Where the local-disk storage driver writes. Default `./uploads`. */
     UPLOAD_DIR: z.string().default('uploads'),

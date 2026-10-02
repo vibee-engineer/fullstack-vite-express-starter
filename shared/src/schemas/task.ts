@@ -30,6 +30,12 @@ export const TaskSchema = z.object({
   title: z.string(),
   description: z.string().nullable(),
   status: TaskStatusSchema,
+  /**
+   * The user who owns the row, or `null` for a SHARED row (the seeded demo
+   * data, anything created while signed out). See OwnerScope in
+   * server/src/middleware/scope.ts for who can see what.
+   */
+  ownerId: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -68,9 +74,21 @@ export const TaskIdParamSchema = z.object({
   id: z.string().min(1),
 });
 
-/** GET /api/tasks query string. `status` narrows the list; both are optional. */
+/** Columns the list may be ordered by — a WHITELIST, never a raw column name from the URL. */
+export const TASK_SORT_FIELDS = ['createdAt', 'title'] as const;
+
+/** GET /api/tasks query string. Every field is optional. */
 export const TaskListQuerySchema = z.object({
   status: TaskStatusSchema.optional(),
+  /** Case-insensitive search over title + description. Blank = no search. */
+  q: z
+    .string()
+    .trim()
+    .max(100)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+  sort: z.enum(TASK_SORT_FIELDS).default('createdAt'),
+  dir: z.enum(['asc', 'desc']).default('desc'),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   /** Opaque: the `nextCursor` of the previous page. */
   cursor: z.string().min(1).optional(),

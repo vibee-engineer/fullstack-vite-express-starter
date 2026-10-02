@@ -36,12 +36,15 @@ vi.mock('../../repositories/taskRepository', () => ({
 // app.ts's transitive `taskRepository` import resolves to the stub.
 const { createApp } = await import('../../app');
 const app = createApp();
+/** Signed-out caller: every repository call is scoped (middleware/scope.ts). */
+const ANON = { ownerId: null };
 
 const TASK: Task = {
   id: 'task_1',
   title: 'Write the route test',
   description: null,
   status: 'todo',
+  ownerId: null,
   createdAt: '2026-07-31T00:00:00.000Z',
   updatedAt: '2026-07-31T00:00:00.000Z',
 };
@@ -64,7 +67,12 @@ describe('GET /api/tasks', () => {
 
     await request(app).get('/api/tasks?status=done').expect(200);
 
-    expect(repo.list).toHaveBeenCalledWith({ status: 'done', limit: 50 });
+    expect(repo.list).toHaveBeenCalledWith(ANON, {
+      status: 'done',
+      limit: 50,
+      sort: 'createdAt',
+      dir: 'desc',
+    });
   });
 
   it('rejects an unknown status with 400 VALIDATION', async () => {
@@ -88,7 +96,7 @@ describe('GET /api/tasks/:id', () => {
     const res = await request(app).get('/api/tasks/task_1').expect(200);
 
     expect(res.body).toEqual(TASK);
-    expect(repo.findById).toHaveBeenCalledWith('task_1');
+    expect(repo.findById).toHaveBeenCalledWith(ANON, 'task_1');
   });
 
   it('404s with TASK_NOT_FOUND when the repository returns null', async () => {
@@ -112,7 +120,7 @@ describe('POST /api/tasks', () => {
 
     expect(res.body).toEqual(TASK);
     // zod `.trim()` runs before the handler sees the body.
-    expect(repo.create).toHaveBeenCalledWith({ title: 'Write the route test' });
+    expect(repo.create).toHaveBeenCalledWith(ANON, { title: 'Write the route test' });
   });
 
   it('rejects an empty title with 400 VALIDATION and zod details', async () => {
@@ -138,7 +146,7 @@ describe('PATCH /api/tasks/:id', () => {
     const res = await request(app).patch('/api/tasks/task_1').send({ status: 'done' }).expect(200);
 
     expect(res.body).toEqual(updated);
-    expect(repo.update).toHaveBeenCalledWith('task_1', { status: 'done' });
+    expect(repo.update).toHaveBeenCalledWith(ANON, 'task_1', { status: 'done' });
   });
 
   it('rejects an empty patch with 400 VALIDATION', async () => {
@@ -164,7 +172,7 @@ describe('DELETE /api/tasks/:id', () => {
     const res = await request(app).delete('/api/tasks/task_1').expect(204);
 
     expect(res.body).toEqual({});
-    expect(repo.remove).toHaveBeenCalledWith('task_1');
+    expect(repo.remove).toHaveBeenCalledWith(ANON, 'task_1');
   });
 
   it('404s when nothing was deleted', async () => {

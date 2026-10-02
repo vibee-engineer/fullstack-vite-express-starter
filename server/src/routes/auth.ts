@@ -20,6 +20,7 @@ import {
   readSessionCookie,
   setSessionCookie,
 } from '../middleware/auth';
+import { authLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 import { EmailTakenError, login, logout, register } from '../services/auth';
 
@@ -28,6 +29,7 @@ export const authRouter = Router();
 /** POST /api/auth/register → 201 { user } + session cookie */
 authRouter.post(
   '/register',
+  authLimiter,
   validate(RegisterSchema),
   asyncHandler(async (req, res, next) => {
     try {
@@ -50,6 +52,7 @@ authRouter.post(
 /** POST /api/auth/login → 200 { user } + session cookie | 401 */
 authRouter.post(
   '/login',
+  authLimiter,
   validate(LoginSchema),
   asyncHandler(async (req, res, next) => {
     const result = await login(req.body as Login);

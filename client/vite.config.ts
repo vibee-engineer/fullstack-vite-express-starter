@@ -59,18 +59,50 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    // Pre-bundle the shadcn/Radix primitives so the first navigation doesn't
-    // pay a cold-boot recompile cost.
+    // Pre-bundle EVERY runtime dependency the starter ships, not just what the
+    // reference pages import today. Vite's start-up scan only finds deps reachable
+    // from current routes; the first page that imports anything else (a Tabs,
+    // a DatePicker, a chart) makes Vite re-optimize mid-load, and the open tab
+    // briefly renders the route error page ("Invalid hook call": two React
+    // copies) until the forced reload. Keep this list in sync with
+    // package.json `dependencies`.
     include: [
       'react',
       'react-dom',
       'react-router-dom',
+      'react-helmet-async',
+      'react-hook-form',
+      '@hookform/resolvers/zod',
+      'zod',
       '@tanstack/react-query',
       'axios',
       'clsx',
       'tailwind-merge',
       'class-variance-authority',
       'sonner',
+      'lucide-react',
+      'date-fns',
+      'react-day-picker',
+      'recharts',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-avatar',
+      '@radix-ui/react-checkbox',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-progress',
+      '@radix-ui/react-radio-group',
+      '@radix-ui/react-select',
+      '@radix-ui/react-separator',
+      '@radix-ui/react-slot',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-tabs',
+      '@radix-ui/react-tooltip',
     ],
   },
 });

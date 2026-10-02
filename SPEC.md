@@ -257,13 +257,14 @@ fullstack-vite-express-starter/
 
 **Server (`server/.env`):**
 
-| Var              | Default                                                    | Purpose                                                  |
-| ---------------- | ---------------------------------------------------------- | -------------------------------------------------------- |
-| `PORT`           | `3001`                                                     | Express listen port (do not change; nginx maps to this). |
-| `NODE_ENV`       | `development`                                              | Standard.                                                |
-| `DATABASE_URL`   | `postgresql://postgres:postgres@db:5432/app?schema=public` | Prisma connection string. Postgres variant.              |
-| `MONGO_URL`      | `mongodb://db:27017/app`                                   | Mongoose connection string. Mongo variant.               |
-| `ALLOWED_ORIGIN` | `http://localhost:8888`                                    | CORS allowed origin.                                     |
+| Var               | Default                                                    | Purpose                                                      |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------------ |
+| `PORT`            | `3001`                                                     | Express listen port (do not change; nginx maps to this).     |
+| `NODE_ENV`        | `development`                                              | Standard.                                                    |
+| `DATABASE_URL`    | `postgresql://postgres:postgres@db:5432/app?schema=public` | Prisma connection string. Postgres variant.                  |
+| `MONGO_URL`       | `mongodb://db:27017/app`                                   | Mongoose connection string. Mongo variant.                   |
+| `ALLOWED_ORIGIN`  | `http://localhost:8888`                                    | CORS allowed origin.                                         |
+| `AUTH_RATE_LIMIT` | `10`                                                       | Failed register/login attempts per IP per 15 min before 429. |
 
 Additional secrets (Stripe / Postmark / OpenAI etc.) added by the agent when the brief needs them — always via `ask_user_questions` first, never a fake key.
 

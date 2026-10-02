@@ -15,6 +15,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import { HelmetProvider } from 'react-helmet-async';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '@shared/types';
 
@@ -40,6 +41,7 @@ const TASKS: Task[] = [
     title: 'Read the reference vertical',
     description: 'Schema → model → repository → routes → client → page.',
     status: 'todo',
+    ownerId: null,
     createdAt: '2026-07-31T00:00:00.000Z',
     updatedAt: '2026-07-31T00:00:00.000Z',
   },
@@ -48,12 +50,13 @@ const TASKS: Task[] = [
     title: 'Copy the shape',
     description: null,
     status: 'done',
+    ownerId: null,
     createdAt: '2026-07-30T00:00:00.000Z',
     updatedAt: '2026-07-30T00:00:00.000Z',
   },
 ];
 
-function renderPage(ui: ReactElement = <TasksPage />) {
+function renderPage(ui: ReactElement = <TasksPage />, url = '/tasks') {
   // Fresh cache per test, retries off — retries make failure assertions slow
   // and flaky.
   const queryClient = new QueryClient({
@@ -61,9 +64,20 @@ function renderPage(ui: ReactElement = <TasksPage />) {
   });
   return render(
     <HelmetProvider>
-      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        {/* The page keeps search + sort in the URL, so it needs a router. */}
+        <MemoryRouter initialEntries={[url]}>
+          {ui}
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>
     </HelmetProvider>,
   );
+}
+
+/** Renders the current query string so tests can assert URL state. */
+function LocationProbe() {
+  return <output data-testid="location">{useLocation().search}</output>;
 }
 
 beforeEach(() => {
@@ -213,5 +227,61 @@ describe('TasksPage — update and delete', () => {
 
     await waitFor(() => expect(apiMock.delete).toHaveBeenCalledWith('/tasks/task_2'));
     await waitFor(() => expect(apiMock.get).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe('TasksPage — search, sort, optimistic status', () => {
+  it('reads q and sort from the URL and sends them to the server', async () => {
+    apiMock.get.mockResolvedValue({ data: { items: [TASKS[0]], total: 1 } });
+    renderPage(<TasksPage />, '/tasks?q=vertical&sort=title');
+    await screen.findByText('Read the reference vertical');
+    expect(apiMock.get).toHaveBeenCalledWith('/tasks', {
+      params: { q: 'vertical', sort: 'title', dir: 'asc' },
+    });
+    expect(screen.getByRole('searchbox', { name: 'Search tasks' })).toHaveValue('vertical');
+  });
+
+  it('typing writes ?q= to the URL once, after the debounce', async () => {
+    apiMock.get.mockResolvedValue({ data: { items: TASKS, total: 2 } });
+    renderPage();
+    await screen.findByText('Copy the shape');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search tasks' }), 'copy');
+    expect(screen.getByTestId('location')).toHaveTextContent(/^$/); // not per keystroke
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('?q=copy'));
+    await waitFor(() =>
+      expect(apiMock.get).toHaveBeenLastCalledWith('/tasks', {
+        params: { q: 'copy', sort: 'createdAt', dir: 'desc' },
+      }),
+    );
+    // No request for the partial words "c", "co", "cop".
+    const sentQs = apiMock.get.mock.calls.map((c) => c[1]?.params?.q).filter(Boolean);
+    expect(sentQs).toEqual(['copy']);
+  });
+
+  it('a search with no hits says so and offers to clear it (not "No tasks yet")', async () => {
+    apiMock.get.mockResolvedValue({ data: { items: [], total: 0 } });
+    renderPage(<TasksPage />, '/tasks?q=zzz');
+    expect(await screen.findByText('No tasks match “zzz”')).toBeInTheDocument();
+    expect(screen.queryByText('No tasks yet')).not.toBeInTheDocument();
+    apiMock.get.mockResolvedValue({ data: { items: TASKS, total: 2 } });
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^$/));
+    expect(await screen.findByText('Copy the shape')).toBeInTheDocument();
+  });
+
+  it('flips the status badge before the server answers, and rolls back on failure', async () => {
+    apiMock.get.mockResolvedValue({ data: { items: [TASKS[0]], total: 1 } });
+    let reject!: (e: unknown) => void;
+    apiMock.patch.mockImplementation(() => new Promise((_res, rej) => (reject = rej)));
+    renderPage();
+    const item = (await screen.findByText('Read the reference vertical')).closest('li')!;
+    expect(within(item).getByText('To do')).toBeInTheDocument();
+
+    await userEvent.click(within(item).getByRole('button', { name: /Advance status/ }));
+    // Optimistic: the server has not answered yet.
+    expect(within(item).getByText('In progress')).toBeInTheDocument();
+
+    reject({ status: 500, message: 'Server exploded' });
+    await waitFor(() => expect(within(item).getByText('To do')).toBeInTheDocument());
   });
 });

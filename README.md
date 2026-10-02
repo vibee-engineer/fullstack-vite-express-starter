@@ -70,6 +70,17 @@ The starter ships **one** complete vertical feature, `Task`. It exists to be pat
 
 Order matters: write the schema first, then the model + migration, then the repository, then the routes, then the client. Update [CONTRACTS.md](./CONTRACTS.md) before the backend code.
 
+### Built-in building blocks — use these before writing your own
+
+| Need                              | Use                                                                                                                           | Why it exists                                                                                                                                                                                |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Per-user data                     | `ownerScope(req)` (`server/src/middleware/scope.ts`) as the FIRST argument of every repository call; `ownerId` column + index | Broken object-level authorization is OWASP API #1. Scoping in the repository signature means a route cannot forget it. Out-of-scope rows read as 404.                                        |
+| Search / sort / filter in the URL | `TasksPage.tsx` (`useSearchParams`, debounced `q`, whitelisted `sort`) + `useTasks(params)` with `keepPreviousData`           | Filters survive reload, Back and a pasted link; no skeleton flash per keystroke. "No results" and "nothing yet" are different empty states.                                                  |
+| Instant toggles / inline edits    | `useUpdateTask` in `client/src/api/tasks.ts`                                                                                  | TanStack's optimistic template: patch every cached list, roll back on error, re-sync on settle.                                                                                              |
+| A date field                      | `<DatePicker />` (`client/src/components/ui/date-picker.tsx`), `<Calendar />` for inline/range                                | Speaks `YYYY-MM-DD` keys, so a day never shifts with the browser's time zone.                                                                                                                |
+| Appointments / reservations       | `server/src/services/booking` — `generateSlots()`, `noOverlapConstraintSql()`, `isSlotTaken()`                                | Slots are computed in the BUSINESS's IANA zone (DST-safe); a Postgres `EXCLUDE` constraint makes double booking impossible even under concurrent requests, and surfaces as `409 SLOT_TAKEN`. |
+| Login abuse                       | `authLimiter` (`server/src/middleware/rate-limit.ts`)                                                                         | 10 failed attempts / 15 min / IP by default (`AUTH_RATE_LIMIT`); successful logins never count. Reuse it on any credential or OTP route.                                                     |
+
 ## Testing
 
 ```bash

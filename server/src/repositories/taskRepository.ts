@@ -19,17 +19,26 @@
  */
 
 import { isMongo, isPostgres } from '../env';
+import { canSee, visibleTo, type OwnerScope } from '../middleware/scope';
 import type { CreateTask, Task, TaskListQuery, TaskStatus, UpdateTask } from '@shared/types';
 
+/**
+ * Every method takes the caller's `OwnerScope` FIRST (see middleware/scope.ts):
+ * a row outside the scope behaves exactly like a row that does not exist.
+ */
 export interface TaskRepository {
   /** Newest first. `total` is the count matching the filter, ignoring `limit`. */
-  list(query: TaskListQuery): Promise<{ items: Task[]; total: number; nextCursor: string | null }>;
-  findById(id: string): Promise<Task | null>;
-  create(input: CreateTask): Promise<Task>;
-  /** Resolves `null` when no row matched — the route turns that into a 404. */
-  update(id: string, patch: UpdateTask): Promise<Task | null>;
-  /** `false` when no row matched. */
-  remove(id: string): Promise<boolean>;
+  list(
+    scope: OwnerScope,
+    query: TaskListQuery,
+  ): Promise<{ items: Task[]; total: number; nextCursor: string | null }>;
+  findById(scope: OwnerScope, id: string): Promise<Task | null>;
+  /** Created as the scope's owner (`null` = shared). */
+  create(scope: OwnerScope, input: CreateTask): Promise<Task>;
+  /** Resolves `null` when no visible row matched — the route turns that into a 404. */
+  update(scope: OwnerScope, id: string, patch: UpdateTask): Promise<Task | null>;
+  /** `false` when no visible row matched. */
+  remove(scope: OwnerScope, id: string): Promise<boolean>;
 }
 
 /** The one place a DB row becomes the JSON wire shape. */
@@ -38,6 +47,7 @@ function toTask(row: {
   title: string;
   description: string | null;
   status: string;
+  ownerId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): Task {
@@ -46,6 +56,7 @@ function toTask(row: {
     title: row.title,
     description: row.description ?? null,
     status: row.status as TaskStatus,
+    ownerId: row.ownerId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -57,11 +68,6 @@ function toTask(row: {
  */
 export const isObjectId = (id: string): boolean => /^[a-f0-9]{24}$/i.test(id);
 
-/** Prisma "record not found" — thrown by update/delete on a missing row. */
-function isRecordNotFound(err: unknown): boolean {
-  return typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2025';
-}
-
 // ---------------------------------------------------------------------------
 // Prisma / Postgres
 // ---------------------------------------------------------------------------
@@ -70,14 +76,28 @@ export function createPrismaTaskRepository(): TaskRepository {
   const db = async () => (await import('../db/prisma')).prisma;
 
   return {
-    async list({ status, limit, cursor }) {
+    async list(scope, { status, q, sort = 'createdAt', dir = 'desc', limit, cursor }) {
       const prisma = await db();
-      const where = status ? { status } : {};
+      const where = {
+        AND: [
+          visibleTo(scope),
+          status ? { status } : {},
+          q
+            ? {
+                OR: [
+                  { title: { contains: q, mode: 'insensitive' as const } },
+                  { description: { contains: q, mode: 'insensitive' as const } },
+                ],
+              }
+            : {},
+        ],
+      };
       const [rows, total] = await Promise.all([
         prisma.task.findMany({
           where,
-          // id tiebreak: a stable total order, so a cursor never skips/repeats.
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          // `sort` is whitelisted by TaskListQuerySchema. id tiebreak: a stable
+          // total order, so a cursor never skips or repeats rows.
+          orderBy: [{ [sort]: dir }, { id: dir }],
           take: limit + 1,
           ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         }),
@@ -88,16 +108,17 @@ export function createPrismaTaskRepository(): TaskRepository {
       return { items: page.map(toTask), total, nextCursor };
     },
 
-    async findById(id) {
+    async findById(scope, id) {
       const prisma = await db();
-      const row = await prisma.task.findUnique({ where: { id } });
+      const row = await prisma.task.findFirst({ where: { id, ...visibleTo(scope) } });
       return row ? toTask(row) : null;
     },
 
-    async create(input) {
+    async create(scope, input) {
       const prisma = await db();
       const row = await prisma.task.create({
         data: {
+          ownerId: scope.ownerId,
           title: input.title,
           description: input.description ?? null,
           // `undefined` = "not provided", so the model default (`todo`) applies.
@@ -107,26 +128,23 @@ export function createPrismaTaskRepository(): TaskRepository {
       return toTask(row);
     },
 
-    async update(id, patch) {
+    async update(scope, id, patch) {
       const prisma = await db();
-      try {
-        const row = await prisma.task.update({ where: { id }, data: patch });
-        return toTask(row);
-      } catch (err) {
-        if (isRecordNotFound(err)) return null;
-        throw err;
-      }
+      // updateMany so the ownership filter is part of the WRITE itself: there
+      // is no read-then-write window, and another owner's id matches 0 rows.
+      const { count } = await prisma.task.updateMany({
+        where: { id, ...visibleTo(scope) },
+        data: patch,
+      });
+      if (count === 0) return null;
+      const row = await prisma.task.findUnique({ where: { id } });
+      return row ? toTask(row) : null;
     },
 
-    async remove(id) {
+    async remove(scope, id) {
       const prisma = await db();
-      try {
-        await prisma.task.delete({ where: { id } });
-        return true;
-      } catch (err) {
-        if (isRecordNotFound(err)) return false;
-        throw err;
-      }
+      const { count } = await prisma.task.deleteMany({ where: { id, ...visibleTo(scope) } });
+      return count > 0;
     },
   };
 }
@@ -134,6 +152,10 @@ export function createPrismaTaskRepository(): TaskRepository {
 // ---------------------------------------------------------------------------
 // Mongoose / Mongo
 // ---------------------------------------------------------------------------
+
+/** Mongo form of `visibleTo`. */
+const mongoVisible = (scope: OwnerScope) =>
+  scope.ownerId ? { ownerId: { $in: [scope.ownerId, null] } } : { ownerId: null };
 
 export function createMongooseTaskRepository(): TaskRepository {
   const model = async () => (await import('../../mongoose/models/Task')).Task;
@@ -143,6 +165,7 @@ export function createMongooseTaskRepository(): TaskRepository {
     title: string;
     description: string | null;
     status: string;
+    ownerId?: string | null;
     createdAt: Date;
     updatedAt: Date;
   }): Task =>
@@ -151,27 +174,37 @@ export function createMongooseTaskRepository(): TaskRepository {
       title: doc.title,
       description: doc.description,
       status: doc.status,
+      ownerId: doc.ownerId ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     });
 
   return {
-    async list({ status, limit, cursor }) {
+    async list(scope, { status, q, sort = 'createdAt', dir = 'desc', limit, cursor }) {
       const Task = await model();
-      const filter: Record<string, unknown> = status ? { status } : {};
-      const pageFilter: Record<string, unknown> = { ...filter };
+      const and: Record<string, unknown>[] = [mongoVisible(scope)];
+      if (status) and.push({ status });
+      if (q) {
+        // Escape: the search box must never become a user-controlled regex.
+        const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        and.push({ $or: [{ title: re }, { description: re }] });
+      }
+      const filter = { $and: and };
+      const step = dir === 'asc' ? '$gt' : '$lt';
+      const pageAnd = [...and];
       if (cursor) {
         const at = isObjectId(cursor) ? await Task.findById(cursor).exec() : null;
         if (at) {
-          pageFilter.$or = [
-            { createdAt: { $lt: at.createdAt } },
-            { createdAt: at.createdAt, _id: { $lt: at._id } },
-          ];
+          const v = (at as unknown as Record<string, unknown>)[sort];
+          pageAnd.push({
+            $or: [{ [sort]: { [step]: v } }, { [sort]: v, _id: { [step]: at._id } }],
+          });
         }
       }
+      const order = dir === 'asc' ? 1 : -1;
       const [docs, total] = await Promise.all([
-        Task.find(pageFilter)
-          .sort({ createdAt: -1, _id: -1 })
+        Task.find({ $and: pageAnd })
+          .sort({ [sort]: order, _id: order })
           .limit(limit + 1)
           .exec(),
         Task.countDocuments(filter).exec(),
@@ -181,16 +214,17 @@ export function createMongooseTaskRepository(): TaskRepository {
       return { items: page.map(fromDoc), total, nextCursor };
     },
 
-    async findById(id) {
+    async findById(scope, id) {
       if (!isObjectId(id)) return null;
       const Task = await model();
-      const doc = await Task.findById(id).exec();
+      const doc = await Task.findOne({ _id: id, ...mongoVisible(scope) }).exec();
       return doc ? fromDoc(doc) : null;
     },
 
-    async create(input) {
+    async create(scope, input) {
       const Task = await model();
       const doc = await Task.create({
+        ownerId: scope.ownerId,
         title: input.title,
         description: input.description ?? null,
         status: input.status ?? 'todo',
@@ -198,20 +232,20 @@ export function createMongooseTaskRepository(): TaskRepository {
       return fromDoc(doc);
     },
 
-    async update(id, patch) {
+    async update(scope, id, patch) {
       if (!isObjectId(id)) return null;
       const Task = await model();
-      const doc = await Task.findByIdAndUpdate(id, patch, {
+      const doc = await Task.findOneAndUpdate({ _id: id, ...mongoVisible(scope) }, patch, {
         new: true,
         runValidators: true,
       }).exec();
       return doc ? fromDoc(doc) : null;
     },
 
-    async remove(id) {
+    async remove(scope, id) {
       if (!isObjectId(id)) return false;
       const Task = await model();
-      const doc = await Task.findByIdAndDelete(id).exec();
+      const doc = await Task.findOneAndDelete({ _id: id, ...mongoVisible(scope) }).exec();
       return Boolean(doc);
     },
   };
@@ -231,14 +265,23 @@ export function createMemoryTaskRepository(seed: Task[] = []): TaskRepository {
   let counter = seed.length;
 
   const nextId = () => `mem_${++counter}_${Date.now().toString(36)}`;
-  const sorted = () =>
-    [...rows.values()].sort((a, b) =>
-      a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0,
-    );
-
   return {
-    async list({ status, limit, cursor }) {
-      const matching = sorted().filter((t) => (status ? t.status === status : true));
+    async list(scope, { status, q, sort = 'createdAt', dir = 'desc', limit, cursor }) {
+      const needle = q?.toLowerCase();
+      const sign = dir === 'asc' ? 1 : -1;
+      const matching = [...rows.values()]
+        .filter(
+          (t) =>
+            canSee(scope, t) &&
+            (status ? t.status === status : true) &&
+            (needle ? `${t.title}\n${t.description ?? ''}`.toLowerCase().includes(needle) : true),
+        )
+        .sort((a, b) => {
+          const x = String(a[sort]);
+          const y = String(b[sort]);
+          const primary = sort === 'title' ? x.localeCompare(y) : x < y ? -1 : x > y ? 1 : 0;
+          return sign * (primary || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        });
       const start = cursor ? matching.findIndex((t) => t.id === cursor) + 1 : 0;
       const items = matching.slice(start, start + limit);
       const nextCursor =
@@ -246,14 +289,16 @@ export function createMemoryTaskRepository(seed: Task[] = []): TaskRepository {
       return { items, total: matching.length, nextCursor };
     },
 
-    async findById(id) {
-      return rows.get(id) ?? null;
+    async findById(scope, id) {
+      const row = rows.get(id);
+      return row && canSee(scope, row) ? row : null;
     },
 
-    async create(input) {
+    async create(scope, input) {
       const now = new Date().toISOString();
       const task: Task = {
         id: nextId(),
+        ownerId: scope.ownerId,
         title: input.title,
         description: input.description ?? null,
         // Mirrors the `@default(todo)` in the Prisma model / mongoose schema.
@@ -265,9 +310,9 @@ export function createMemoryTaskRepository(seed: Task[] = []): TaskRepository {
       return task;
     },
 
-    async update(id, patch) {
+    async update(scope, id, patch) {
       const existing = rows.get(id);
-      if (!existing) return null;
+      if (!existing || !canSee(scope, existing)) return null;
       const next: Task = {
         ...existing,
         ...(patch.title !== undefined ? { title: patch.title } : {}),
@@ -279,7 +324,9 @@ export function createMemoryTaskRepository(seed: Task[] = []): TaskRepository {
       return next;
     },
 
-    async remove(id) {
+    async remove(scope, id) {
+      const existing = rows.get(id);
+      if (!existing || !canSee(scope, existing)) return false;
       return rows.delete(id);
     },
   };

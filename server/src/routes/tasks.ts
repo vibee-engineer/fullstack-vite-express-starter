@@ -24,10 +24,18 @@ import {
 import type { CreateTask, TaskListQuery, UpdateTask } from '@shared/types';
 
 import { asyncHandler } from '../middleware/async-handler';
+import { attachUser } from '../middleware/auth';
+import { ownerScope } from '../middleware/scope';
 import { validate } from '../middleware/validate';
 import { getTaskRepository } from '../repositories/taskRepository';
 
 export const tasksRouter = Router();
+
+// Who is asking: sets req.user when a session cookie is valid, never blocks.
+// Every repository call below passes ownerScope(req), so another user's task
+// is a 404 (see middleware/scope.ts). Swap in `authRequired` for a resource
+// that only signed-in users may touch.
+tasksRouter.use(attachUser);
 
 /** Shared 404 — one shape for every "no such task". */
 const notFound = (id: string) => ({
@@ -42,7 +50,7 @@ tasksRouter.get(
   validate(TaskListQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
     const query = req.query as unknown as TaskListQuery;
-    const result = await getTaskRepository().list(query);
+    const result = await getTaskRepository().list(ownerScope(req), query);
     res.json(result);
   }),
 );
@@ -53,7 +61,7 @@ tasksRouter.get(
   validate(TaskIdParamSchema, 'params'),
   asyncHandler(async (req, res, next) => {
     const { id } = req.params as { id: string };
-    const task = await getTaskRepository().findById(id);
+    const task = await getTaskRepository().findById(ownerScope(req), id);
     if (!task) return next(notFound(id));
     res.json(task);
   }),
@@ -64,7 +72,7 @@ tasksRouter.post(
   '/',
   validate(CreateTaskSchema),
   asyncHandler(async (req, res) => {
-    const task = await getTaskRepository().create(req.body as CreateTask);
+    const task = await getTaskRepository().create(ownerScope(req), req.body as CreateTask);
     res.status(201).json(task);
   }),
 );
@@ -76,7 +84,7 @@ tasksRouter.patch(
   validate(UpdateTaskSchema),
   asyncHandler(async (req, res, next) => {
     const { id } = req.params as { id: string };
-    const task = await getTaskRepository().update(id, req.body as UpdateTask);
+    const task = await getTaskRepository().update(ownerScope(req), id, req.body as UpdateTask);
     if (!task) return next(notFound(id));
     res.json(task);
   }),
@@ -88,7 +96,7 @@ tasksRouter.delete(
   validate(TaskIdParamSchema, 'params'),
   asyncHandler(async (req, res, next) => {
     const { id } = req.params as { id: string };
-    const deleted = await getTaskRepository().remove(id);
+    const deleted = await getTaskRepository().remove(ownerScope(req), id);
     if (!deleted) return next(notFound(id));
     res.status(204).end();
   }),
