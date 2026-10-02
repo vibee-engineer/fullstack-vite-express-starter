@@ -10,6 +10,10 @@ import type { Account } from './account';
  * AccountMenu — the account affordance: an avatar that, when given a `menu`,
  * opens a dropdown with the user's name/email and your menu items. Renders
  * nothing when no account is passed (an app with no auth shows no chip).
+ *
+ * Without a `menu` the avatar is a plain image, not a button: a button that
+ * does nothing on click is a dead control, to a screen reader and to the
+ * build gate's dead_interactive_elements check alike.
  */
 export function AccountMenu({ account }: { account: Account }) {
   if (!account) return null;
@@ -22,24 +26,32 @@ export function AccountMenu({ account }: { account: Account }) {
     .join('')
     .toUpperCase();
 
-  const trigger = (
-    <button
-      type="button"
-      className="flex items-center gap-2 rounded-full outline-none ring-ring focus-visible:ring-2"
-      aria-label="Account"
-    >
-      <Avatar className="h-8 w-8">
-        {account.avatarUrl ? <AvatarImage src={account.avatarUrl} alt={account.name} /> : null}
-        <AvatarFallback className="text-xs">{initials || '?'}</AvatarFallback>
-      </Avatar>
-    </button>
+  const avatar = (
+    <Avatar className="h-8 w-8">
+      {account.avatarUrl ? <AvatarImage src={account.avatarUrl} alt={account.name} /> : null}
+      <AvatarFallback className="text-xs">{initials || '?'}</AvatarFallback>
+    </Avatar>
   );
 
-  if (!account.menu) return trigger;
+  if (!account.menu) {
+    return (
+      <span className="flex items-center gap-2" title={account.name}>
+        {avatar}
+      </span>
+    );
+  }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="flex items-center gap-2 rounded-full outline-none ring-ring focus-visible:ring-2"
+          aria-label="Account"
+        >
+          {avatar}
+        </button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="px-2 py-1.5">
           <div className="text-sm font-medium">{account.name}</div>
