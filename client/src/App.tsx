@@ -1,9 +1,10 @@
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster } from '@/components/ui/toaster';
 
 import { AppShell } from '@/components/layout/AppShell';
 import { HomePage } from '@/pages/HomePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RouteErrorPage } from '@/pages/RouteErrorPage';
 import { TasksPage } from '@/pages/TasksPage';
 
 /**
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
     ),
     errorElement: (
       <AppShell>
-        <NotFoundPage />
+        <RouteErrorPage />
       </AppShell>
     ),
     children: [

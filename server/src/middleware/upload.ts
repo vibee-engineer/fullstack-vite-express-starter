@@ -19,6 +19,8 @@ import { env } from '../env';
 
 const upload = multer({
   storage: multer.memoryStorage(),
+  // Browsers send the filename as raw UTF-8; multer's default latin1 garbles it.
+  defParamCharset: 'utf8',
   limits: { fileSize: env.MAX_UPLOAD_BYTES, files: 1 },
 });
 

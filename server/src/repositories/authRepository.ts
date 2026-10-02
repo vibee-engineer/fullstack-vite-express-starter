@@ -42,6 +42,13 @@ export interface AuthRepository {
   /** Email must already be normalized (trimmed + lowercased) by the caller. */
   findUserByEmail(email: string): Promise<StoredUser | null>;
   findUserById(id: string): Promise<StoredUser | null>;
+  /** Total users — decides whether a registrant is the first (owner). */
+  /**
+   * Accounts that can sign in (passwordHash set). A seeded profile with no
+   * password (prisma/seed.ts's demo user) does not count, so the creator's own
+   * first sign-up on a freshly seeded app is still the owner.
+   */
+  countLoginUsers(): Promise<number>;
   /** Throws `EMAIL_TAKEN` (see below) when the email collides. */
   createUser(input: NewUser): Promise<StoredUser>;
   createSession(input: StoredSession): Promise<StoredSession>;
@@ -104,6 +111,11 @@ export function createPrismaAuthRepository(): AuthRepository {
       const prisma = await db();
       const row = await prisma.user.findUnique({ where: { id } });
       return row ? toUser(row) : null;
+    },
+
+    async countLoginUsers() {
+      const prisma = await db();
+      return prisma.user.count({ where: { passwordHash: { not: null } } });
     },
 
     async createUser(input) {
@@ -188,6 +200,11 @@ export function createMongooseAuthRepository(): AuthRepository {
       return doc ? toUser(doc) : null;
     },
 
+    async countLoginUsers() {
+      const User = await users();
+      return User.countDocuments({ passwordHash: { $ne: null } }).exec();
+    },
+
     async createUser(input) {
       const User = await users();
       try {
@@ -258,6 +275,10 @@ export function createMemoryAuthRepository(): AuthRepository {
 
     async findUserById(id) {
       return usersById.get(id) ?? null;
+    },
+
+    async countLoginUsers() {
+      return [...usersById.values()].filter((u) => u.passwordHash != null).length;
     },
 
     async createUser(input) {

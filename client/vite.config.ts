@@ -52,6 +52,11 @@ export default defineConfig({
     hmr: {
       clientPort: Number(process.env.VITE_HMR_CLIENT_PORT ?? 8888),
     },
+    // `npm run dev` without nginx: forward /api to Express. Under compose nginx
+    // routes /api before it ever reaches Vite, so this is inert there.
+    proxy: {
+      '/api': process.env.VITE_API_PROXY ?? 'http://localhost:3001',
+    },
   },
   optimizeDeps: {
     // Pre-bundle the shadcn/Radix primitives so the first navigation doesn't

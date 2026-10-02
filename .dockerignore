@@ -13,3 +13,9 @@ node_modules
 .founding
 .claude
 .gstack
+
+# Never bake local secrets or uploaded files into an image layer.
+**/.env
+**/.env.*
+!**/.env.example
+**/uploads

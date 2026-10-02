@@ -18,7 +18,9 @@ export function HomePage() {
       <div className="container py-16">
         <Card className="max-w-xl mx-auto">
           <CardHeader>
-            <CardTitle>Ready to build</CardTitle>
+            <CardTitle>
+              <h1>Ready to build</h1>
+            </CardTitle>
             <CardDescription>
               This is the fullstack starter. Edit{' '}
               <code className="rounded bg-muted px-1 py-0.5 text-xs">

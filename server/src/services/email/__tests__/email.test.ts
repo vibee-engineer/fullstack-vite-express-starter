@@ -9,7 +9,7 @@ import type { JobLogger } from '../../jobs/scheduler';
 import { assertValidMessage, recipients } from '../message';
 import { LogEmailDriver } from '../logDriver';
 import { ResendEmailDriver } from '../resend';
-import { SesEmailDriver, type SesClientLike } from '../ses';
+import { SesEmailDriver, defaultLoadClient, type SesClientLike } from '../ses';
 import { esc, layout, welcomeEmail } from '../templates';
 import { getEmailSender, setEmailSender, sendEmail } from '../index';
 
@@ -175,8 +175,12 @@ describe('SesEmailDriver', () => {
   });
 
   it('gives a helpful error when the SDK is not installed (default loader)', async () => {
-    const driver = new SesEmailDriver({ region: 'us-east-1', defaultFrom: 'f@app.com' });
-    await expect(driver.send({ to: 'a@x.com', subject: 's', text: 't' })).rejects.toThrow(
+    const missing = async () => {
+      throw Object.assign(new Error("Cannot find package '@aws-sdk/client-sesv2'"), {
+        code: 'ERR_MODULE_NOT_FOUND',
+      });
+    };
+    await expect(defaultLoadClient('us-east-1', missing)).rejects.toThrow(
       /@aws-sdk\/client-sesv2 is not installed/,
     );
   });

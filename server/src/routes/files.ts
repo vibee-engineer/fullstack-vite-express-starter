@@ -95,14 +95,14 @@ filesRouter.post(
   }),
 );
 
-/** GET /api/files?limit=50 → { items, total } */
+/** GET /api/files?limit=50&cursor= → { items, total, nextCursor } */
 filesRouter.get(
   '/',
   validate(PaginationQuerySchema, 'query'),
   asyncHandler(async (req, res) => {
-    const { limit } = req.query as unknown as { limit: number };
-    const { items, total } = await getFileRepository().list({ limit });
-    res.json({ items: items.map(toMeta), total });
+    const { limit, cursor } = req.query as unknown as { limit: number; cursor?: string };
+    const { items, total, nextCursor } = await getFileRepository().list({ limit, cursor });
+    res.json({ items: items.map(toMeta), total, nextCursor });
   }),
 );
 
@@ -141,11 +141,18 @@ filesRouter.get(
 
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Length', String(file.size));
-    // `inline` so browsers preview images/pdfs; the filename is quoted + ascii-safe.
+    // `inline` so browsers preview images/pdfs. filename= must be Latin-1
+    // (setHeader throws ERR_INVALID_CHAR otherwise); the real name rides in
+    // RFC 5987 filename*. contentType is CLIENT-chosen, so anything a browser
+    // would execute (html/svg/xml/js) is forced to download and sandboxed —
+    // otherwise an upload is stored XSS on the app's own origin.
+    const ascii = file.filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '_');
+    const active = /html|xml|svg|javascript|ecmascript/i.test(file.contentType);
     res.setHeader(
       'Content-Disposition',
-      `inline; filename="${file.filename.replace(/["\\]/g, '_')}"`,
+      `${active ? 'attachment' : 'inline'}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(file.filename).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`,
     );
+    if (active) res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     stream.on('error', () => {
       if (!res.headersSent) res.status(500);
       res.end();

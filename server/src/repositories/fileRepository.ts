@@ -11,6 +11,7 @@
  */
 
 import { isMongo, isPostgres } from '../env';
+import { isObjectId } from './taskRepository';
 
 /** A file row including the internal storage key. */
 export interface StoredFile {
@@ -33,7 +34,10 @@ export interface FileRepository {
   create(input: NewFile): Promise<StoredFile>;
   findById(id: string): Promise<StoredFile | null>;
   /** Newest first. `total` ignores `limit`. */
-  list(query: { limit: number }): Promise<{ items: StoredFile[]; total: number }>;
+  list(query: {
+    limit: number;
+    cursor?: string;
+  }): Promise<{ items: StoredFile[]; total: number; nextCursor: string | null }>;
   /** Deletes the row and returns it (so the caller can delete the blob), or null. */
   remove(id: string): Promise<StoredFile | null>;
 }
@@ -67,13 +71,20 @@ export function createPrismaFileRepository(): FileRepository {
       return row ? toFile(row) : null;
     },
 
-    async list({ limit }) {
+    async list({ limit, cursor }) {
       const prisma = await db();
       const [rows, total] = await Promise.all([
-        prisma.file.findMany({ orderBy: { createdAt: 'desc' }, take: limit }),
+        prisma.file.findMany({
+          // id tiebreak: a stable total order, so a cursor never skips/repeats.
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: limit + 1,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
         prisma.file.count(),
       ]);
-      return { items: rows.map(toFile), total };
+      const page = rows.slice(0, limit);
+      const nextCursor = rows.length > limit ? (page[page.length - 1]?.id ?? null) : null;
+      return { items: page.map(toFile), total, nextCursor };
     },
 
     async remove(id) {
@@ -126,21 +137,38 @@ export function createMongooseFileRepository(): FileRepository {
     },
 
     async findById(id) {
+      if (!isObjectId(id)) return null;
       const File = await model();
       const doc = await File.findById(id).exec();
       return doc ? fromDoc(doc) : null;
     },
 
-    async list({ limit }) {
+    async list({ limit, cursor }) {
       const File = await model();
+      const pageFilter: Record<string, unknown> = {};
+      if (cursor) {
+        const at = isObjectId(cursor) ? await File.findById(cursor).exec() : null;
+        if (at) {
+          pageFilter.$or = [
+            { createdAt: { $lt: at.createdAt } },
+            { createdAt: at.createdAt, _id: { $lt: at._id } },
+          ];
+        }
+      }
       const [docs, total] = await Promise.all([
-        File.find().sort({ createdAt: -1 }).limit(limit).exec(),
+        File.find(pageFilter)
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(limit + 1)
+          .exec(),
         File.countDocuments().exec(),
       ]);
-      return { items: docs.map(fromDoc), total };
+      const page = docs.slice(0, limit);
+      const nextCursor = docs.length > limit ? String(page[page.length - 1]?._id) : null;
+      return { items: page.map(fromDoc), total, nextCursor };
     },
 
     async remove(id) {
+      if (!isObjectId(id)) return null;
       const File = await model();
       const doc = await File.findByIdAndDelete(id).exec();
       return doc ? fromDoc(doc) : null;
@@ -168,11 +196,14 @@ export function createMemoryFileRepository(): FileRepository {
       return rows.get(id) ?? null;
     },
 
-    async list({ limit }) {
+    async list({ limit, cursor }) {
       const sorted = [...rows.values()].sort(
-        (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+        (a, b) => b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1),
       );
-      return { items: sorted.slice(0, limit), total: sorted.length };
+      const start = cursor ? sorted.findIndex((f) => f.id === cursor) + 1 : 0;
+      const page = sorted.slice(start, start + limit);
+      const nextCursor = start + limit < sorted.length ? (page[page.length - 1]?.id ?? null) : null;
+      return { items: page, total: sorted.length, nextCursor };
     },
 
     async remove(id) {

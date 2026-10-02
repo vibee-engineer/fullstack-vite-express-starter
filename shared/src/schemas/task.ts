@@ -72,6 +72,8 @@ export const TaskIdParamSchema = z.object({
 export const TaskListQuerySchema = z.object({
   status: TaskStatusSchema.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  /** Opaque: the `nextCursor` of the previous page. */
+  cursor: z.string().min(1).optional(),
 });
 
 /**
@@ -81,4 +83,6 @@ export const TaskListQuerySchema = z.object({
 export const TaskListSchema = z.object({
   items: z.array(TaskSchema),
   total: z.number().int().nonnegative(),
+  /** Pass back as `?cursor=` for the next page; null on the last page. */
+  nextCursor: z.string().nullable(),
 });

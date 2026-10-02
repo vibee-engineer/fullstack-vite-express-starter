@@ -356,7 +356,7 @@ function KanbanColumnShell({
           ) : (
             <div
               className={cn(
-                'flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/70 px-3 py-8 text-center text-xs text-muted-foreground/70 transition-colors duration-fast',
+                'flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/70 px-3 py-8 text-center text-xs text-muted-foreground transition-colors duration-fast',
                 isOver && 'border-primary/40 text-primary-ink',
               )}
             >
@@ -428,6 +428,17 @@ export function KanbanCard({
   return (
     <div
       onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation(); // don't also start a keyboard drag on the wrapper
+                onClick();
+              }
+            }
+          : undefined
+      }
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       className={cn(

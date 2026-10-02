@@ -126,11 +126,23 @@ export function DataTable<T extends Record<string, unknown>>({
     if (!sort) return filtered;
     const col = cols.find((c) => c.key === sort.key);
     const arr = [...filtered].sort((a, b) => {
-      const av = valueOf(a, col);
-      const bv = valueOf(b, col);
-      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
-      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
-      return 0;
+      const av = valueOf(a, col) as unknown;
+      const bv = valueOf(b, col) as unknown;
+      // Missing values always sort last; `undefined < x` is false both ways,
+      // which made the comparator inconsistent and left the column unsorted.
+      const aNil = av == null || av === '';
+      const bNil = bv == null || bv === '';
+      if (aNil || bNil) return aNil === bNil ? 0 : aNil ? 1 : -1;
+      const cmp =
+        typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : av instanceof Date && bv instanceof Date
+            ? av.getTime() - bv.getTime()
+            : String(av).localeCompare(String(bv), undefined, {
+                numeric: true,
+                sensitivity: 'base',
+              });
+      return sort.dir === 'asc' ? cmp : -cmp;
     });
     return arr;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -163,7 +175,19 @@ export function DataTable<T extends Record<string, unknown>>({
           <TableHeader>
             <TableRow>
               {cols.map((col) => (
-                <TableHead key={col.key} className={cn(alignClass(col.align), col.className)}>
+                <TableHead
+                  key={col.key}
+                  className={cn(alignClass(col.align), col.className)}
+                  aria-sort={
+                    col.sortable
+                      ? sort?.key === col.key
+                        ? sort.dir === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                      : undefined
+                  }
+                >
                   {col.sortable ? (
                     <button
                       type="button"
@@ -193,7 +217,23 @@ export function DataTable<T extends Record<string, unknown>>({
               <TableRow
                 key={rowKey(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? 'cursor-pointer' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.target !== e.currentTarget) return;
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+                className={
+                  onRowClick
+                    ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring'
+                    : undefined
+                }
               >
                 {cols.map((col) => (
                   <TableCell key={col.key} className={cn(alignClass(col.align), col.className)}>

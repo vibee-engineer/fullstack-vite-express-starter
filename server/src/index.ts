@@ -40,9 +40,16 @@ async function main() {
   registerBackupJob(scheduler);
   scheduler.start();
 
+  let shuttingDown = false;
   const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     logger.info({ signal }, 'shutdown signal received');
-    server.close();
+    // Stop accepting, then let in-flight responses finish (bounded) before we
+    // pull the DB out from under them and exit.
+    const closed = new Promise((r) => server.close(r));
+    server.closeIdleConnections();
+    await Promise.race([closed, new Promise((r) => setTimeout(r, 10_000))]);
     // Stop firing new work and let in-flight background tasks finish (bounded).
     scheduler.stop();
     await Promise.race([runner.drain(), new Promise((r) => setTimeout(r, 5000))]);

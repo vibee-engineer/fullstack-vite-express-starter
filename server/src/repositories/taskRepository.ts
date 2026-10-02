@@ -23,7 +23,7 @@ import type { CreateTask, Task, TaskListQuery, TaskStatus, UpdateTask } from '@s
 
 export interface TaskRepository {
   /** Newest first. `total` is the count matching the filter, ignoring `limit`. */
-  list(query: TaskListQuery): Promise<{ items: Task[]; total: number }>;
+  list(query: TaskListQuery): Promise<{ items: Task[]; total: number; nextCursor: string | null }>;
   findById(id: string): Promise<Task | null>;
   create(input: CreateTask): Promise<Task>;
   /** Resolves `null` when no row matched — the route turns that into a 404. */
@@ -51,6 +51,12 @@ function toTask(row: {
   };
 }
 
+/**
+ * Mongo ids are 24-hex ObjectIds; anything else makes mongoose throw a
+ * CastError (a 500). Treat it as "no such row" so the route 404s.
+ */
+export const isObjectId = (id: string): boolean => /^[a-f0-9]{24}$/i.test(id);
+
 /** Prisma "record not found" — thrown by update/delete on a missing row. */
 function isRecordNotFound(err: unknown): boolean {
   return typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2025';
@@ -64,14 +70,22 @@ export function createPrismaTaskRepository(): TaskRepository {
   const db = async () => (await import('../db/prisma')).prisma;
 
   return {
-    async list({ status, limit }) {
+    async list({ status, limit, cursor }) {
       const prisma = await db();
       const where = status ? { status } : {};
       const [rows, total] = await Promise.all([
-        prisma.task.findMany({ where, orderBy: { createdAt: 'desc' }, take: limit }),
+        prisma.task.findMany({
+          where,
+          // id tiebreak: a stable total order, so a cursor never skips/repeats.
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: limit + 1,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
         prisma.task.count({ where }),
       ]);
-      return { items: rows.map(toTask), total };
+      const page = rows.slice(0, limit);
+      const nextCursor = rows.length > limit ? (page[page.length - 1]?.id ?? null) : null;
+      return { items: page.map(toTask), total, nextCursor };
     },
 
     async findById(id) {
@@ -142,17 +156,33 @@ export function createMongooseTaskRepository(): TaskRepository {
     });
 
   return {
-    async list({ status, limit }) {
+    async list({ status, limit, cursor }) {
       const Task = await model();
-      const filter = status ? { status } : {};
+      const filter: Record<string, unknown> = status ? { status } : {};
+      const pageFilter: Record<string, unknown> = { ...filter };
+      if (cursor) {
+        const at = isObjectId(cursor) ? await Task.findById(cursor).exec() : null;
+        if (at) {
+          pageFilter.$or = [
+            { createdAt: { $lt: at.createdAt } },
+            { createdAt: at.createdAt, _id: { $lt: at._id } },
+          ];
+        }
+      }
       const [docs, total] = await Promise.all([
-        Task.find(filter).sort({ createdAt: -1 }).limit(limit).exec(),
+        Task.find(pageFilter)
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(limit + 1)
+          .exec(),
         Task.countDocuments(filter).exec(),
       ]);
-      return { items: docs.map(fromDoc), total };
+      const page = docs.slice(0, limit);
+      const nextCursor = docs.length > limit ? String(page[page.length - 1]?._id) : null;
+      return { items: page.map(fromDoc), total, nextCursor };
     },
 
     async findById(id) {
+      if (!isObjectId(id)) return null;
       const Task = await model();
       const doc = await Task.findById(id).exec();
       return doc ? fromDoc(doc) : null;
@@ -169,6 +199,7 @@ export function createMongooseTaskRepository(): TaskRepository {
     },
 
     async update(id, patch) {
+      if (!isObjectId(id)) return null;
       const Task = await model();
       const doc = await Task.findByIdAndUpdate(id, patch, {
         new: true,
@@ -178,6 +209,7 @@ export function createMongooseTaskRepository(): TaskRepository {
     },
 
     async remove(id) {
+      if (!isObjectId(id)) return false;
       const Task = await model();
       const doc = await Task.findByIdAndDelete(id).exec();
       return Boolean(doc);
@@ -205,9 +237,13 @@ export function createMemoryTaskRepository(seed: Task[] = []): TaskRepository {
     );
 
   return {
-    async list({ status, limit }) {
+    async list({ status, limit, cursor }) {
       const matching = sorted().filter((t) => (status ? t.status === status : true));
-      return { items: matching.slice(0, limit), total: matching.length };
+      const start = cursor ? matching.findIndex((t) => t.id === cursor) + 1 : 0;
+      const items = matching.slice(start, start + limit);
+      const nextCursor =
+        start + limit < matching.length ? (items[items.length - 1]?.id ?? null) : null;
+      return { items, total: matching.length, nextCursor };
     },
 
     async findById(id) {

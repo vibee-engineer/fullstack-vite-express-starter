@@ -68,11 +68,14 @@ export async function register(input: Register): Promise<SessionResult> {
   // Race-safe: two concurrent registers for the same email both pass the check
   // above, but the unique constraint makes exactly one createUser win; the
   // loser surfaces as EmailTakenError from the repository.
+  // First account that can sign in owns the app; every later self-sign-up is
+  // staff (previously everyone got 'owner', so requireRole('owner') guarded nothing).
+  const role = (await repo().countLoginUsers()) === 0 ? 'owner' : 'staff';
   const user = await repo().createUser({
     email,
     name: input.name ?? null,
     passwordHash,
-    role: 'owner',
+    role,
   });
   return issueSession(user);
 }
