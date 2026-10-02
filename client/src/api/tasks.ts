@@ -12,26 +12,42 @@
  *      `err.message` on failure. The axios interceptor in `./client.ts` has
  *      already normalized the server's `{ error: { message, code } }` envelope,
  *      so `err.message` is always human-readable.
+ *
+ * `useUpdateTask` is the OPTIMISTIC template (TanStack Query "Optimistic
+ * Updates" guide): patch every cached list in onMutate, roll back in onError,
+ * re-sync in onSettled. Use it for toggles and inline edits the user expects
+ * to feel instant; plain invalidate-on-success is fine for create/delete.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import type { CreateTask, Task, TaskList, TaskStatus, UpdateTask } from '@shared/types';
+import type { CreateTask, Task, TaskList, TaskListQuery, UpdateTask } from '@shared/types';
 
 import { api } from './client';
 import type { ApiError } from './client';
 
+/** What a list view can ask the server for. Mirrors `TaskListQuerySchema`. */
+export type TaskListParams = Partial<Pick<TaskListQuery, 'status' | 'q' | 'sort' | 'dir'>>;
+
 /** Query-key factory. Every hook below and every invalidation reads from here. */
 export const taskKeys = {
   all: ['tasks'] as const,
-  list: (status?: TaskStatus) => ['tasks', 'list', status ?? 'all'] as const,
+  lists: () => ['tasks', 'list'] as const,
+  // The params object IS part of the key: a new search or sort is a new cache entry.
+  list: (params: TaskListParams = {}) => ['tasks', 'list', params] as const,
   detail: (id: string) => ['tasks', 'detail', id] as const,
 };
 
 // --- transport ---------------------------------------------------------------
 
-export async function fetchTasks(status?: TaskStatus): Promise<TaskList> {
-  const res = await api.get<TaskList>('/tasks', { params: status ? { status } : undefined });
+export async function fetchTasks(params: TaskListParams = {}): Promise<TaskList> {
+  // Drop empty values so `?q=` never reaches the server.
+  const query = Object.fromEntries(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== ''),
+  );
+  const res = await api.get<TaskList>('/tasks', {
+    params: Object.keys(query).length ? query : undefined,
+  });
   return res.data;
 }
 
@@ -56,10 +72,14 @@ export async function deleteTask(id: string): Promise<void> {
 
 // --- hooks -------------------------------------------------------------------
 
-export function useTasks(status?: TaskStatus) {
+export function useTasks(params: TaskListParams = {}) {
   return useQuery<TaskList, ApiError>({
-    queryKey: taskKeys.list(status),
-    queryFn: () => fetchTasks(status),
+    queryKey: taskKeys.list(params),
+    queryFn: () => fetchTasks(params),
+    // Keep showing the previous results while a new search/sort loads, instead
+    // of flashing the skeleton on every keystroke. `isPlaceholderData` is true
+    // meanwhile; dim the list with it.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -85,16 +105,39 @@ export function useCreateTask() {
   });
 }
 
+type UpdateVars = { id: string; patch: UpdateTask };
+type Snapshot = { lists: [readonly unknown[], TaskList | undefined][]; detail: Task | undefined };
+
 export function useUpdateTask() {
   const qc = useQueryClient();
-  return useMutation<Task, ApiError, { id: string; patch: UpdateTask }>({
+  return useMutation<Task, ApiError, UpdateVars, Snapshot>({
     mutationFn: ({ id, patch }) => updateTask(id, patch),
+    onMutate: async ({ id, patch }) => {
+      // Stop in-flight refetches from overwriting the optimistic value.
+      await qc.cancelQueries({ queryKey: taskKeys.all });
+      const snapshot: Snapshot = {
+        lists: qc.getQueriesData<TaskList>({ queryKey: taskKeys.lists() }),
+        detail: qc.getQueryData<Task>(taskKeys.detail(id)),
+      };
+      const apply = (t: Task): Task => (t.id === id ? { ...t, ...patch } : t);
+      qc.setQueriesData<TaskList>({ queryKey: taskKeys.lists() }, (old) =>
+        old ? { ...old, items: old.items.map(apply) } : old,
+      );
+      if (snapshot.detail) qc.setQueryData(taskKeys.detail(id), apply(snapshot.detail));
+      return snapshot;
+    },
+    onError: (err, { id }, snapshot) => {
+      // Roll back to exactly what was on screen before the click.
+      snapshot?.lists.forEach(([key, data]) => qc.setQueryData(key, data));
+      if (snapshot?.detail) qc.setQueryData(taskKeys.detail(id), snapshot.detail);
+      toast.error(err.message);
+    },
     onSuccess: (task) => {
       qc.setQueryData(taskKeys.detail(task.id), task);
-      void qc.invalidateQueries({ queryKey: taskKeys.all });
       toast.success('Task updated');
     },
-    onError: (err) => toast.error(err.message),
+    // Success or failure, re-sync with the server (filters/sort may have changed membership).
+    onSettled: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }
 

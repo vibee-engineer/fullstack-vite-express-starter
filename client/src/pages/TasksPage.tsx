@@ -13,18 +13,26 @@
  *
  * Forms use react-hook-form + `zodResolver` against the SHARED schema, so
  * client-side validation and server-side validation can never disagree.
+ *
+ * Search and sort live in the URL (`?q=…&sort=title`), not in useState, so a
+ * filtered view survives reload, Back, and a pasted link. Typing updates a
+ * local draft; the URL (and the query) follow 300 ms later. "No tasks yet" and
+ * "no matches for this search" are DIFFERENT empty states.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ListChecks, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Check, ListChecks, Loader2, Pencil, Plus, Search, SearchX, Trash2, X } from 'lucide-react';
 import { CreateTaskSchema } from '@shared/schemas/task';
 import type { CreateTask, Task, TaskStatus } from '@shared/types';
 
 import { SITE } from '@/config/site';
 import { useCreateTask, useDeleteTask, useTasks, useUpdateTask } from '@/api/tasks';
+import type { TaskListParams } from '@/api/tasks';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +40,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -52,8 +67,53 @@ const NEXT_STATUS: Record<TaskStatus, TaskStatus> = {
   done: 'todo',
 };
 
+/** URL value → server sort. The URL holds a short name, never a raw column. */
+const SORTS = {
+  newest: { label: 'Newest first', sort: 'createdAt', dir: 'desc' },
+  oldest: { label: 'Oldest first', sort: 'createdAt', dir: 'asc' },
+  title: { label: 'Title A–Z', sort: 'title', dir: 'asc' },
+} as const satisfies Record<
+  string,
+  Required<Pick<TaskListParams, 'sort' | 'dir'>> & { label: string }
+>;
+type SortKey = keyof typeof SORTS;
+const isSortKey = (v: string | null): v is SortKey => v !== null && v in SORTS;
+
 export function TasksPage() {
-  const tasks = useTasks();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get('q') ?? '';
+  const sortKey: SortKey = isSortKey(searchParams.get('sort'))
+    ? (searchParams.get('sort') as SortKey)
+    : 'newest';
+
+  // Local draft so typing stays instant; the URL follows once typing pauses.
+  const [draftQ, setDraftQ] = useState(q);
+  const debouncedQ = useDebouncedValue(draftQ.trim());
+  useEffect(() => setDraftQ(q), [q]); // Back/Forward changed the URL under us
+  useEffect(() => {
+    if (debouncedQ === q) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (debouncedQ) next.set('q', debouncedQ);
+        else next.delete('q');
+        return next;
+      },
+      { replace: true }, // one history entry per search, not per keystroke
+    );
+    // Deliberately keyed on the debounced value only.
+  }, [debouncedQ]);
+
+  const setSort = (key: SortKey) =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (key === 'newest') next.delete('sort');
+      else next.set('sort', key);
+      return next;
+    });
+
+  const { sort, dir } = SORTS[sortKey];
+  const tasks = useTasks({ q: q || undefined, sort, dir });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -164,6 +224,37 @@ export function TasksPage() {
           </CardContent>
         </Card>
 
+        {/* --- search + sort (URL state) ------------------------------------ */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search
+              aria-hidden
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              type="search"
+              aria-label="Search tasks"
+              placeholder="Search tasks"
+              className="pl-9"
+              value={draftQ}
+              maxLength={100}
+              onChange={(e) => setDraftQ(e.target.value)}
+            />
+          </div>
+          <Select value={sortKey} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="sm:w-44" aria-label="Sort tasks">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORTS) as SortKey[]).map((key) => (
+                <SelectItem key={key} value={key}>
+                  {SORTS[key].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* --- 1. loading --------------------------------------------------- */}
         {tasks.isPending ? (
           <div className="space-y-3" data-testid="tasks-loading">
@@ -194,7 +285,19 @@ export function TasksPage() {
         ) : null}
 
         {/* --- 3. empty ----------------------------------------------------- */}
-        {tasks.data && tasks.data.items.length === 0 ? (
+        {tasks.data && tasks.data.items.length === 0 && q ? (
+          <EmptyState
+            icon={SearchX}
+            title={`No tasks match “${q}”`}
+            description="Try a different word, or clear the search to see every task."
+            action={
+              <Button variant="outline" onClick={() => setDraftQ('')}>
+                Clear search
+              </Button>
+            }
+          />
+        ) : null}
+        {tasks.data && tasks.data.items.length === 0 && !q ? (
           <EmptyState
             icon={ListChecks}
             title="No tasks yet"
@@ -207,10 +310,18 @@ export function TasksPage() {
           <>
             {tasks.data.total > tasks.data.items.length ? (
               <p className="text-sm text-muted-foreground">
-                Showing the newest {tasks.data.items.length} of {tasks.data.total} tasks.
+                Showing {tasks.data.items.length} of {tasks.data.total} tasks.
               </p>
             ) : null}
-            <ul className="space-y-3" aria-label="Tasks">
+            <ul
+              className={
+                tasks.isPlaceholderData
+                  ? 'space-y-3 opacity-60 transition-opacity'
+                  : 'space-y-3 transition-opacity'
+              }
+              aria-label="Tasks"
+              aria-busy={tasks.isPlaceholderData}
+            >
               {tasks.data.items.map((task) => {
                 const meta = STATUS_META[task.status];
                 const isEditing = editingId === task.id;

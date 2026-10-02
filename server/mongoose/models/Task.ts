@@ -31,6 +31,8 @@ export interface TaskDoc {
   title: string;
   description: string | null;
   status: TaskStatus;
+  /** Owner's user id, or null for a shared row. See server/src/middleware/scope.ts. */
+  ownerId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +48,7 @@ const TaskMongooseSchema = new Schema<TaskDoc>(
       required: true,
       index: true,
     },
+    ownerId: { type: String, default: null, index: true },
   },
   { timestamps: true },
 );

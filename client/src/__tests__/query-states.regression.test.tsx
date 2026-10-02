@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HelmetProvider } from 'react-helmet-async';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Task } from '@shared/types';
 
@@ -23,6 +24,7 @@ const T: Task = {
   title: 'A',
   description: null,
   status: 'todo',
+  ownerId: null,
   createdAt: '2026-07-31T00:00:00.000Z',
   updatedAt: '2026-07-31T00:00:00.000Z',
 };
@@ -30,7 +32,9 @@ const T: Task = {
 function wrap(ui: React.ReactElement, qc: QueryClient) {
   return render(
     <HelmetProvider>
-      <QueryClientProvider client={qc}>{ui}</QueryClientProvider>
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>{ui}</MemoryRouter>
+      </QueryClientProvider>
     </HelmetProvider>,
   );
 }

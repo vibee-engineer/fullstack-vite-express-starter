@@ -14,6 +14,13 @@ import { apiRouter } from './routes';
 export function createApp() {
   const app = express();
 
+  // Trust the private hops in front of us (nginx in compose, Fly's proxy over
+  // 6PN, docker networks) and nothing else. Express then takes the first
+  // UNTRUSTED address from the right of X-Forwarded-For: the real client,
+  // which a client cannot forge by prepending entries. Never `true`: that
+  // trusts any client-sent header (rate limits and audit IPs become spoofable).
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
+
   app.use(pinoHttp({ logger }));
   app.use(helmetMiddleware);
   app.use(corsMiddleware);
