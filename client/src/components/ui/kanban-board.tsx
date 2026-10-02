@@ -357,7 +357,7 @@ function KanbanColumnShell({
             <div
               className={cn(
                 'flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/70 px-3 py-8 text-center text-xs text-muted-foreground/70 transition-colors duration-fast',
-                isOver && 'border-primary/40 text-primary',
+                isOver && 'border-primary/40 text-primary-ink',
               )}
             >
               {draggable ? `${emptyLabel} — drop here` : emptyLabel}
