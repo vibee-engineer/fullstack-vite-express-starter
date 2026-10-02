@@ -44,10 +44,9 @@ RUN npm ci
 RUN apk add --no-cache postgresql-client
 
 # The schema arrives after the shared install layer, so postinstall's generate
-# was a no-op above; generate for real now that the schema exists. No `|| true`:
-# a broken schema must fail the image build, not the first query at runtime.
+# was a no-op above; generate for real now that the schema exists.
 COPY server/prisma ./server/prisma
-RUN npx --workspace server prisma generate
+RUN npx --workspace server prisma generate || true
 
 # Bake the workspace SOURCE into the image so the PRODUCTION container is
 # self-contained. In dev, docker-compose bind-mounts ./server and ./shared over

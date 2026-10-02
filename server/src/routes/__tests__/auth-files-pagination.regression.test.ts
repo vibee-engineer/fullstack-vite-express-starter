@@ -49,6 +49,21 @@ describe('register roles', () => {
     expect(first.body.user.role).toBe('owner');
     expect(second.body.user.role).toBe('staff');
   });
+  it('a seeded profile with no password does not take the owner role from the creator', async () => {
+    const repo = createMemoryAuthRepository();
+    setAuthRepository(repo);
+    // prisma/seed.ts upserts demo@example.com with no passwordHash.
+    await repo.createUser({
+      email: 'demo@example.com',
+      name: 'Demo User',
+      passwordHash: null as unknown as string,
+      role: 'staff',
+    });
+    const creator = await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'creator@example.com', password: 'password123' });
+    expect(creator.body.user.role).toBe('owner');
+  });
 });
 
 describe('file download hardening', () => {
