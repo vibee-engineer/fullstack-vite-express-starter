@@ -7,8 +7,12 @@
 ## Endpoints
 
 <!-- METHOD path -> summary. Example:
+- `GET /api/health` — liveness probe, returns `{ status: 'ok', timestamp }`
+- `POST /api/users` — create user, body = `CreateUserSchema` (see shared/src/schemas.ts)
+-->
+
 - `GET /api/health` — liveness probe (process is up; does not check the database), returns `{ status: 'ok', timestamp }`.
-- `POST /api/auth/register` — body `{ email, password, name? }`. 201 `{ user }` + session cookie; 409 if the email exists. The FIRST user is `owner`, every later sign-up is `staff`.
+- `POST /api/auth/register` — body `{ email, password, name? }`. 201 `{ user }` + session cookie; 409 if the email exists. The first account that can sign in is `owner`; every later sign-up is `staff` (the password-less seed profile does not count).
 - `POST /api/auth/login` — body `{ email, password }`. 200 `{ user }` + session cookie, or 401.
 - `POST /api/auth/logout` — 204, always clears the cookie.
 - `GET /api/auth/me` — 200 `{ user }` or 401. The client's "am I signed in?" probe.
@@ -18,7 +22,7 @@
 - `PATCH /api/tasks/:id` — partial update. Body = `UpdateTaskSchema` (≥1 field). Returns `TaskSchema`, or 404 `TASK_NOT_FOUND`.
 - `DELETE /api/tasks/:id` — 204 with no body, or 404 `TASK_NOT_FOUND`.
 - `POST /api/files` — multipart form-data, field `file`. 201 `FileMeta`; 413 over `MAX_UPLOAD_BYTES`.
-- `GET /api/files` — `{ items, total }` (`limit`, `cursor`).
+- `GET /api/files` — `{ items, total, nextCursor }` (`limit`, `cursor`).
 - `GET /api/files/:id/meta` — `FileMeta`, or 404.
 - `GET /api/files/:id` — the raw bytes. Images/PDF/text preview inline; HTML, SVG, XML and script types download as an attachment under a sandbox CSP.
 - `DELETE /api/files/:id` — 204, removes the row and the blob, or 404.
