@@ -105,9 +105,12 @@ function groupAlerts(alerts: AlertItem[]): Group[] {
 function AlertBanner({ alert }: { alert: AlertItem }) {
   const meta = LEVEL_META[alert.level];
   const Icon = meta.icon;
+  // No href = not a link. `href="#"` is a dead anchor (jumps to top, rewrites the URL).
+  const Tag = alert.href ? 'a' : 'div';
   return (
-    <a
-      href={alert.href ?? '#'}
+    <Tag
+      href={alert.href}
+      role={alert.href ? undefined : 'alert'}
       className={cn(
         'flex items-center gap-2.5 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
         meta.banner,
@@ -115,7 +118,7 @@ function AlertBanner({ alert }: { alert: AlertItem }) {
     >
       <Icon className="h-4 w-4 shrink-0" />
       <span className="truncate">{alert.title}</span>
-    </a>
+    </Tag>
   );
 }
 
@@ -180,10 +183,11 @@ export function AlertSummary({ alerts, className }: { alerts: AlertItem[]; class
               {groups.map((g) => {
                 const meta = LEVEL_META[g.level];
                 const Icon = meta.icon;
+                const Row = g.href ? 'a' : 'div';
                 return (
-                  <a
+                  <Row
                     key={g.key}
-                    href={g.href ?? '#'}
+                    href={g.href}
                     className="flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-muted/50"
                   >
                     <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', meta.text)} />
@@ -199,7 +203,7 @@ export function AlertSummary({ alerts, className }: { alerts: AlertItem[]; class
                         </p>
                       ) : null}
                     </div>
-                  </a>
+                  </Row>
                 );
               })}
             </div>

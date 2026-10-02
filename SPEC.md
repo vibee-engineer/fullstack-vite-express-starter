@@ -1,8 +1,11 @@
 # fullstack-vite-express-starter — SPEC
 
 **Target repo:** `github.com/vibee-engineer/fullstack-vite-express-starter`
+
+> **Historical design doc.** The code, `README.md` and `CONTRACTS.md` are the source of truth; where this file disagrees with them, they win. Lines below that would break a build if followed have been corrected (2026-10-02).
+
 **Status:** shipped. The file listing below is the original scaffold; the repo has since grown the `Task` reference vertical (`shared/src/schemas/task.ts`, `server/prisma/migrations/`, `server/mongoose/models/Task.ts`, `server/src/repositories/taskRepository.ts`, `server/src/routes/tasks.ts`, `client/src/api/tasks.ts`, `client/src/pages/TasksPage.tsx`) plus vitest suites for both workspaces. See the "reference pattern" table in README.md.
-**Stack:** React 19 + Vite 5 + TypeScript + Tailwind v4 + shadcn primitives (client), Express 4 + TypeScript + tsx watch + Prisma+Postgres OR Mongoose+Mongo + zod + pino (server), Docker Compose (orchestration), nginx (single-port terminator).
+**Stack:** React 19 + Vite 7 + TypeScript + Tailwind 3.4 (`tailwind.config.ts`) + shadcn primitives (client), Express 4 + TypeScript + tsx watch + Prisma+Postgres OR Mongoose+Mongo + zod + pino (server), Docker Compose (orchestration), nginx (single-port terminator).
 
 ---
 
@@ -68,8 +71,8 @@ fullstack-vite-express-starter/
 │       ├── components/
 │       │   ├── layout/
 │       │   │   ├── AppShell.tsx   # <header> + <main> + <footer>
-│       │   │   ├── SiteHeader.tsx # desktop + mobile Sheet nav
-│       │   │   └── SiteFooter.tsx # brand + link groups + copyright
+│       │   │   ├── AppSidebar.tsx # sidebar rail (desktop) — the default shell
+│       │   │   └── Topbar.tsx     # top bar + Sheet mobile nav
 │       │   └── ui/
 │       │       ├── accordion.tsx
 │       │       ├── alert.tsx
@@ -161,10 +164,10 @@ fullstack-vite-express-starter/
 - **`Dockerfile.client`** — `FROM node:20-alpine`, `WORKDIR /app`, copy root package files, `npm ci`, `WORKDIR /app/client`, expose 5173, `CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]`.
 - **`Dockerfile.server`** — `FROM node:20-alpine`, install openssl (Prisma binary needs it), copy root package files + prisma schema, `npm ci`, `npx prisma generate`, expose 3001, `CMD ["npm", "run", "dev", "-w", "server"]` (tsx watch).
 - **`nginx.conf`** — one server block listening on 8888. `location /api/ { proxy_pass http://server:3001/api/; }`. `location / { proxy_pass http://client:5173/; }`. WebSocket upgrade headers set for both (Vite HMR needs it). No caching for dev.
-- **`package.json`** (root) — `"private": true`, `"workspaces": ["shared", "client", "server"]`, root scripts: `dev` (docker compose up), `build` (client build + server build), `lint` (eslint), `format` (prettier). Dev deps: `eslint`, `prettier`, `typescript@^5.6`, `@types/node`.
+- **`package.json`** (root) — `"private": true`, `"workspaces": ["shared", "client", "server"]`, root scripts: `dev` (docker compose up), `build` (client build + server build), `lint` (`prettier --check`), `format` (prettier). Dev deps: `prettier`, `typescript@^5.6`, `@types/node`.
 - **`package-lock.json`** — committed lockfile for reproducibility.
 - **`README.md`** — one-page quickstart. Sections: `## Quickstart` (`docker compose up`, open http://localhost:8888), `## Stack` (bullet list), `## Structure` (link to SPEC.md), `## Switching to MongoDB`, `## Deploying` (link to founding.dev docs). Under 120 lines.
-- **`tsconfig.base.json`** — strict mode, target ES2022, module NodeNext, verbatimModuleSyntax, isolatedModules. Client + server + shared extend this.
+- **`tsconfig.base.json`** — strict mode, target ES2022, module ESNext + moduleResolution Bundler, `verbatimModuleSyntax: false`, isolatedModules. Client + server + shared extend this.
 
 ### shared/
 
@@ -177,17 +180,17 @@ fullstack-vite-express-starter/
 
 - **`.env.example`** — `VITE_API_URL=/api` (nginx-relative default; user can override to a live prod URL when deploying separately).
 - **`index.html`** — minimal HTML5 shell, `<div id="root">`, `<script type="module" src="/src/main.tsx">`.
-- **`package.json`** — deps: `react@^19`, `react-dom@^19`, `react-router-dom@^7`, `@tanstack/react-query@^5`, `react-hook-form@^7`, `@hookform/resolvers@^3`, `zod`, `axios@^1`, `react-helmet-async`, `lucide-react`, all `@radix-ui/react-*` primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate`, `sonner`. Dev deps: `vite@^5`, `@vitejs/plugin-react`, `tailwindcss@^4`, `postcss`, `autoprefixer`, `typescript`, `@types/react`, `@types/react-dom`, `@fontsource-variable/{inter,geist,fraunces,instrument-serif,space-grotesk,rajdhani,orbitron,cormorant-garamond,dm-sans,jetbrains-mono}` + `@fontsource/geist-mono`.
+- **`package.json`** — deps: `react@^19`, `react-dom@^19`, `react-router-dom@^7`, `@tanstack/react-query@^5`, `react-hook-form@^7`, `@hookform/resolvers@^3`, `zod`, `axios@^1`, `react-helmet-async`, `lucide-react`, all `@radix-ui/react-*` primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate`, `sonner`. Dev deps: `vite@^7`, `@vitejs/plugin-react`, `tailwindcss@^3.4`, `postcss`, `autoprefixer`, `typescript`, `@types/react`, `@types/react-dom`, `@fontsource-variable/{inter,geist,fraunces,instrument-serif,space-grotesk,rajdhani,orbitron,cormorant-garamond,dm-sans,jetbrains-mono}` + `@fontsource/geist-mono`.
 - **`postcss.config.js`** — tailwindcss + autoprefixer.
 - **`tailwind.config.ts`** — content globs for src/, dark mode `class`, extend theme with shadcn HSL var mapping (matches landing tier's config), tailwindcss-animate plugin.
 - **`tsconfig.json`** — extends base, JSX react-jsx, paths `@/*` → `./src/*`, `@shared/*` → `../shared/src/*`.
 - **`vite.config.ts`** — React plugin, resolve.alias for `@` and `@shared`, `server: { host: '0.0.0.0', port: 5173, hmr: { clientPort: 8888 } }` (HMR through nginx), `optimizeDeps.include` for the shadcn primitives to avoid cold-boot recompile.
-- **`public/favicon.svg`** — generic monogram; agent replaces per brand.
+- **`public/favicon.png`** — generic monogram; agent replaces per brand.
 - **`public/og.png`** — 1200×630 placeholder; agent replaces.
 - **`public/robots.txt`** — allow all by default.
 
 - **`src/App.tsx`** — declares `createBrowserRouter` with `HomePage` at `/` and `NotFoundPage` at `*`. Renders `<AppShell>` as the layout route. Mounts `<Toaster />` once. Agent adds routes here.
-- **`src/main.tsx`** — React root render, wraps in `<HelmetProvider>` + `<QueryClientProvider client={queryClient}>` + `<React.StrictMode>`. Imports font `@fontsource-variable/*` packages.
+- **`src/main.tsx`** — React root render, wraps in `<HelmetProvider>` + `<QueryClientProvider client={queryClient}>` + `<React.StrictMode>`. Fonts load from `client/src/fonts.css` (Google Fonts); there are no `@fontsource` packages.
 - **`src/index.css`** — `@tailwind base/components/utilities`, imports tokens.css, sets `html { -webkit-font-smoothing: antialiased }`, `body { @apply bg-background text-foreground font-body }`.
 - **`src/tokens.css`** — starter defaults from `tokenSeedService.NEUTRAL_DEFAULT`; overwritten on turn 1 by `regenerate_tokens`.
 - **`src/vite-env.d.ts`** — `/// <reference types="vite/client" />` + `interface ImportMetaEnv { VITE_API_URL: string }`.
@@ -196,11 +199,9 @@ fullstack-vite-express-starter/
 - **`src/api/queries.ts`** — example `useHealthQuery()` = useQuery({ queryKey: ['health'], queryFn: () => api.get('/health') }). Documents the pattern; agent adds one per resource.
 - **`src/api/mutations.ts`** — placeholder example useMutation with toast on success/error, invalidate queryKey. Documents the pattern.
 
-- **`src/components/layout/AppShell.tsx`** — `<div className="min-h-screen flex flex-col"> <SiteHeader /> <main className="flex-1"><Outlet /></main> <SiteFooter /> </div>`. Renders as the layout route child in App.tsx.
-- **`src/components/layout/SiteHeader.tsx`** — reads NAV from `@/config/site`, renders logo + links (desktop `hidden md:flex`) + Sheet-based mobile menu (`md:hidden`). ThemeToggle in top right.
-- **`src/components/layout/SiteFooter.tsx`** — reads SITE + FOOTER_GROUPS from `@/config/site`, renders brand column + link columns + copyright. Not a footer with dead flowing text.
+- **`src/components/layout/AppShell.tsx`** — the layout route: `AppSidebar` rail + `Topbar` (+ Sheet mobile nav), `<main>` is the scroll container (`h-screen`, `overflow-y-auto`) and resets to the top on route change. `LAYOUT` selects sidebar / topbar / canvas / focused. (`SiteHeader`/`SiteFooter` in older notes no longer exist.)
 
-- **`src/components/ui/*.tsx`** — 27 shadcn primitives (list above). All standard shadcn source, wired to brand tokens. `empty-state.tsx` and `theme-toggle.tsx` are the two non-stock ones — EmptyState is a first-class primitive because agents forget to build one when a list is empty.
+- **`src/components/ui/*.tsx`** — 36 primitives (see the directory). All standard shadcn source, wired to brand tokens. `empty-state.tsx` and `theme-toggle.tsx` are the two non-stock ones — EmptyState is a first-class primitive because agents forget to build one when a list is empty.
 
 - **`src/config/site.ts`** — exports `SITE = { name, tagline, url, ogImage, author }`, `NAV = [{ label, to }...]`, `NAV_CTA = { label, to }`, `FOOTER_GROUPS = [{ heading, links: [{ label, to }] }...]`. AppShell + SiteHeader + SiteFooter read from here. Agent rewrites on turn 1.
 
@@ -216,10 +217,10 @@ fullstack-vite-express-starter/
 ### server/
 
 - **`.env.example`** — `PORT=3001`, `NODE_ENV=development`, `DATABASE_URL=postgresql://postgres:postgres@db:5432/app?schema=public` (Postgres) OR `MONGO_URL=mongodb://db:27017/app` (Mongo), `ALLOWED_ORIGIN=http://localhost:8888`.
-- **`package.json`** — deps: `express@^4`, `cors`, `helmet`, `pino`, `pino-http`, `pino-pretty`, `zod`, `@prisma/client`, `mongoose`. Dev deps: `tsx@^4`, `typescript`, `@types/express`, `@types/cors`, `@types/node`, `prisma`. Scripts: `dev` (tsx watch src/index.ts), `build` (tsc), `start` (node dist/index.js), `prisma:migrate` (prisma migrate dev), `db:seed` (tsx prisma/seed.ts).
+- **`package.json`** — deps: `express@^4`, `cors`, `helmet`, `pino`, `pino-http`, `pino-pretty`, `zod`, `@prisma/client`, `mongoose`. Dev deps: `tsx@^4`, `typescript`, `@types/express`, `@types/cors`, `@types/node`, `prisma`. Scripts: `dev` (tsx watch src/index.ts), `build` (tsc), `start` (tsx src/index.ts — the server runs from source in prod too; there is no `dist/`), `prisma:migrate` (prisma migrate dev), `db:seed` (tsx prisma/seed.ts).
 - **`tsconfig.json`** — extends base, outDir `dist`, resolveJsonModule, paths `@/*` → `./src/*`, `@shared/*` → `../shared/src/*`.
 
-- **`prisma/schema.prisma`** — datasource `postgresql` from `DATABASE_URL`, generator `prisma-client-js`, one example `model User { id String @id @default(cuid()) email String @unique name String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }`.
+- **`prisma/schema.prisma`** — datasource `postgresql` (Prisma 7: the URL lives in `server/prisma.config.ts`, not the schema), generator `prisma-client-js`, one example `model User { id String @id @default(cuid()) email String @unique name String? createdAt DateTime @default(now()) updatedAt DateTime @updatedAt }`.
 - **`prisma/seed.ts`** — idempotent seed: upsert 1 example user. Runs via `npm run db:seed`.
 
 - **`src/index.ts`** — imports app, env, logger, prisma/mongoose. On boot: validate env → connect db → app.listen(env.PORT, () => logger.info(`listening on ${env.PORT}`)). Graceful shutdown on SIGTERM/SIGINT.
@@ -227,7 +228,7 @@ fullstack-vite-express-starter/
 - **`src/env.ts`** — zod schema for `process.env`. Parses PORT, NODE_ENV, DATABASE_URL/MONGO_URL, ALLOWED_ORIGIN. Throws at boot if invalid — fail fast on misconfig.
 - **`src/logger.ts`** — pino instance. Pretty transport in dev, JSON in prod.
 
-- **`src/db/prisma.ts`** — `export const prisma = new PrismaClient({ log: env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'] })`. Singleton pattern with globalThis guard so `tsx watch` doesn't leak connections.
+- **`src/db/prisma.ts`** — Prisma 7: `new PrismaClient({ adapter: new PrismaPg({ connectionString }) })` via `@prisma/adapter-pg` (see the file); a bare `new PrismaClient({ log })` throws in Prisma 7. Singleton pattern with globalThis guard so `tsx watch` doesn't leak connections.
 - **`src/db/mongoose.ts`** — `export async function connectMongo() { await mongoose.connect(env.MONGO_URL) }`. Called from index.ts before app.listen.
 
 - **`src/middleware/async-handler.ts`** — `export const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next)`. Every async route uses this.

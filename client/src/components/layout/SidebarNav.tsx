@@ -17,7 +17,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       {NAV_SECTIONS.map((section, i) => (
         <div key={section.heading ?? i} className="flex flex-col gap-1">
           {section.heading ? (
-            <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+            <div className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {section.heading}
             </div>
           ) : null}

@@ -4,7 +4,16 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
 
 const TooltipProvider = TooltipPrimitive.Provider;
-const Tooltip = TooltipPrimitive.Root;
+// Self-provided: Radix throws "`Tooltip` must be used within `TooltipProvider`"
+// and the app never mounts one, so every bare <Tooltip> crashed the route.
+const Tooltip = ({
+  delayDuration,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Root>) => (
+  <TooltipPrimitive.Provider delayDuration={delayDuration}>
+    <TooltipPrimitive.Root {...props} />
+  </TooltipPrimitive.Provider>
+);
 const TooltipTrigger = TooltipPrimitive.Trigger;
 
 const TooltipContent = React.forwardRef<

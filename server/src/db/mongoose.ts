@@ -12,7 +12,9 @@ export async function connectMongo(): Promise<void> {
     throw new Error('connectMongo() called without MONGO_URL set.');
   }
   await mongoose.connect(env.MONGO_URL);
-  logger.info({ url: env.MONGO_URL }, 'mongo connected');
+  // Never log the URL itself — it carries the DB password.
+  const { host, name } = mongoose.connection;
+  logger.info({ host, db: name }, 'mongo connected');
 }
 
 export async function disconnectMongo(): Promise<void> {

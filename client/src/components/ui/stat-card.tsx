@@ -111,8 +111,8 @@ export function StatCard({
     isGood === null
       ? 'bg-muted text-muted-foreground'
       : isGood
-        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400';
+        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+        : 'bg-rose-500/10 text-rose-700 dark:text-rose-400';
   const ArrowIcon =
     direction === 'up' ? ArrowUpRight : direction === 'down' ? ArrowDownRight : Minus;
   const sparkTone = isGood === null ? 'accent' : isGood ? 'positive' : 'negative';

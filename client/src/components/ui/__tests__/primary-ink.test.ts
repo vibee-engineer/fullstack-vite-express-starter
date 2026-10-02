@@ -31,7 +31,9 @@ describe('primary ink', () => {
       .filter((f) => !FILL_OK.has(f.split('/').pop()!))
       .flatMap((f) => {
         const src = readFileSync(f, 'utf8');
-        return [...src.matchAll(/(?<![\w-])text-primary(?![\w-])/g)].map(() => f.replace(SRC, 'src'));
+        return [...src.matchAll(/(?<![\w-])text-primary(?![\w-])/g)].map(() =>
+          f.replace(SRC, 'src'),
+        );
       });
     expect(offenders).toEqual([]);
   });

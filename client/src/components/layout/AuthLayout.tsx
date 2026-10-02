@@ -41,7 +41,7 @@ export function AuthLayout({
       {footer ? (
         <div className="mt-6 text-center text-sm text-muted-foreground">{footer}</div>
       ) : null}
-      <p className="mt-8 text-xs text-muted-foreground/70">{SITE.tagline}</p>
+      <p className="mt-8 text-xs text-muted-foreground">{SITE.tagline}</p>
     </div>
   );
 }

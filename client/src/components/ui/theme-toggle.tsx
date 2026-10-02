@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button';
  * localStorage. No React context needed — Tailwind reads the class directly.
  */
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState<boolean>(false);
+  // index.html applies the stored/system theme before first paint; read it back.
+  const [isDark, setIsDark] = useState<boolean>(() =>
+    document.documentElement.classList.contains('dark'),
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem('theme');

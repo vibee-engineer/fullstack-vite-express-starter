@@ -31,13 +31,19 @@ export interface SesConfig {
   loadClient?: () => Promise<{ client: SesClientLike; SendEmailCommand: any }>;
 }
 
-async function defaultLoadClient(
+/**
+ * `importModule` is injectable so the "not installed" path can be tested without
+ * depending on what happens to be resolvable from node_modules (a test that
+ * relied on the SDK being absent made a live SES call once it was installed).
+ */
+export async function defaultLoadClient(
   region: string,
+  importModule: (name: string) => Promise<any> = (name) => import(name),
 ): Promise<{ client: SesClientLike; SendEmailCommand: any }> {
   const moduleName = '@aws-sdk/client-sesv2';
   let mod: any;
   try {
-    mod = await import(moduleName);
+    mod = await importModule(moduleName);
   } catch {
     throw new Error(
       'EMAIL_DRIVER=ses but @aws-sdk/client-sesv2 is not installed. ' +

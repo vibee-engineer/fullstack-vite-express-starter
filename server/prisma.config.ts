@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { defineConfig } from 'prisma/config';
@@ -19,9 +20,16 @@ import { defineConfig } from 'prisma/config';
  * so the datasource is present exactly when required. Matches how prisma/seed.ts
  * reads process.env.DATABASE_URL directly.
  */
+// Prisma 7 no longer reads .env itself, so `npm run prisma:migrate -w server`
+// on a host failed with "datasource.url property is required" even with
+// server/.env filled in. Load it only when the variable is not already set, so
+// a real environment (compose, Fly, CI) always wins over the file.
+if (!process.env.DATABASE_URL && fs.existsSync('.env')) process.loadEnvFile('.env');
+
 const databaseUrl = process.env.DATABASE_URL;
 
 export default defineConfig({
   schema: path.join('prisma', 'schema.prisma'),
+  migrations: { seed: 'tsx prisma/seed.ts' },
   ...(databaseUrl ? { datasource: { url: databaseUrl } } : {}),
 });

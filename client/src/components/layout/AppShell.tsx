@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { CONTENT_WIDTH, LAYOUT, type ContentWidth, type LayoutArchetype } from '@/config/site';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,14 @@ export function AppShell({
   width?: ContentWidth;
 }) {
   const archetype = layout ?? LAYOUT;
+  // The sidebar/canvas shells scroll <main>, not the window, so the router's
+  // window scroll handling never touches it: without this a new route opens
+  // at the previous page's scroll offset.
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [pathname]);
   const contentWidth = width ?? CONTENT_WIDTH;
 
   // The inner content wrapper. 'clamped' gets a readable max-width; 'fluid'
@@ -70,7 +79,7 @@ export function AppShell({
   if (archetype === 'canvas') {
     return (
       <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
-        <Topbar title={title} actions={headerActions} account={account} showBrand />
+        <Topbar title={title} actions={headerActions} account={account} showBrand showNav />
         {/* Full-bleed, non-scrolling: the canvas inside owns scroll/pan. */}
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
       </div>
@@ -102,7 +111,7 @@ export function AppShell({
       <AppSidebar account={account} />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar title={title} actions={headerActions} account={account} />
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main ref={mainRef} className="min-h-0 flex-1 overflow-y-auto">
           <div className={contentClass}>{children}</div>
         </main>
       </div>

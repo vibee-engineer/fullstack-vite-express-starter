@@ -181,7 +181,7 @@ export function TasksPage() {
         ) : null}
 
         {/* --- 2. error ----------------------------------------------------- */}
-        {tasks.isError ? (
+        {tasks.isError && !tasks.data ? (
           <Alert variant="destructive">
             <AlertTitle>Couldn&apos;t load tasks</AlertTitle>
             <AlertDescription className="space-y-3">
@@ -194,112 +194,124 @@ export function TasksPage() {
         ) : null}
 
         {/* --- 3. empty ----------------------------------------------------- */}
-        {tasks.isSuccess && tasks.data.items.length === 0 ? (
+        {tasks.data && tasks.data.items.length === 0 ? (
           <EmptyState
             icon={ListChecks}
             title="No tasks yet"
-            description="Add your first task with the form above. Seeded projects start with three."
+            description="Add your first task with the form above."
           />
         ) : null}
 
         {/* --- 4. loaded ---------------------------------------------------- */}
-        {tasks.isSuccess && tasks.data.items.length > 0 ? (
-          <ul className="space-y-3" aria-label="Tasks">
-            {tasks.data.items.map((task) => {
-              const meta = STATUS_META[task.status];
-              const isEditing = editingId === task.id;
+        {tasks.data && tasks.data.items.length > 0 ? (
+          <>
+            {tasks.data.total > tasks.data.items.length ? (
+              <p className="text-sm text-muted-foreground">
+                Showing the newest {tasks.data.items.length} of {tasks.data.total} tasks.
+              </p>
+            ) : null}
+            <ul className="space-y-3" aria-label="Tasks">
+              {tasks.data.items.map((task) => {
+                const meta = STATUS_META[task.status];
+                const isEditing = editingId === task.id;
+                const isUpdating = updateTask.isPending && updateTask.variables?.id === task.id;
+                const isDeleting = deleteTask.isPending && deleteTask.variables === task.id;
 
-              return (
-                <li
-                  key={task.id}
-                  className="flex items-start gap-4 rounded-xl border border-border bg-card p-4"
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateTask.mutate({
-                        id: task.id,
-                        patch: { status: NEXT_STATUS[task.status] },
-                      })
-                    }
-                    aria-label={`Advance status of ${task.title}`}
-                    className="mt-0.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                return (
+                  <li
+                    key={task.id}
+                    className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 sm:gap-4 sm:p-4"
                   >
-                    <Badge variant={meta.variant}>{meta.label}</Badge>
-                  </button>
+                    <button
+                      type="button"
+                      disabled={isUpdating}
+                      onClick={() =>
+                        updateTask.mutate({
+                          id: task.id,
+                          patch: { status: NEXT_STATUS[task.status] },
+                        })
+                      }
+                      aria-label={`Advance status of ${task.title}`}
+                      className="mt-0.5 shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <Badge variant={meta.variant}>{meta.label}</Badge>
+                    </button>
 
-                  <div className="min-w-0 flex-1 space-y-1">
-                    {isEditing ? (
-                      <Input
-                        autoFocus
-                        aria-label={`Edit title of ${task.title}`}
-                        value={draftTitle}
-                        onChange={(e) => setDraftTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') void commitEdit(task);
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
-                      />
-                    ) : (
-                      <p
-                        className={
-                          task.status === 'done'
-                            ? 'truncate text-sm font-medium text-muted-foreground line-through'
-                            : 'truncate text-sm font-medium'
-                        }
-                      >
-                        {task.title}
-                      </p>
-                    )}
-                    {task.description ? (
-                      <p className="text-sm text-muted-foreground">{task.description}</p>
-                    ) : null}
-                  </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {isEditing ? (
+                        <Input
+                          autoFocus
+                          aria-label={`Edit title of ${task.title}`}
+                          value={draftTitle}
+                          onChange={(e) => setDraftTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') void commitEdit(task);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                        />
+                      ) : (
+                        <p
+                          className={
+                            task.status === 'done'
+                              ? 'break-words text-sm font-medium text-muted-foreground line-through'
+                              : 'break-words text-sm font-medium'
+                          }
+                        >
+                          {task.title}
+                        </p>
+                      )}
+                      {task.description ? (
+                        <p className="break-words text-sm text-muted-foreground">
+                          {task.description}
+                        </p>
+                      ) : null}
+                    </div>
 
-                  <div className="flex shrink-0 items-center gap-1">
-                    {isEditing ? (
-                      <>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {isEditing ? (
+                        <>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Save ${task.title}`}
+                            onClick={() => void commitEdit(task)}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`Cancel editing ${task.title}`}
+                            onClick={() => setEditingId(null)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
                         <Button
                           size="icon"
                           variant="ghost"
-                          aria-label={`Save ${task.title}`}
-                          onClick={() => void commitEdit(task)}
+                          aria-label={`Edit ${task.title}`}
+                          onClick={() => startEdit(task)}
                         >
-                          <Check className="h-4 w-4" />
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          aria-label={`Cancel editing ${task.title}`}
-                          onClick={() => setEditingId(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
+                      )}
                       <Button
                         size="icon"
                         variant="ghost"
-                        aria-label={`Edit ${task.title}`}
-                        onClick={() => startEdit(task)}
+                        aria-label={`Delete ${task.title}`}
+                        disabled={isDeleting}
+                        onClick={() => deleteTask.mutate(task.id)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`Delete ${task.title}`}
-                      disabled={deleteTask.isPending}
-                      onClick={() => deleteTask.mutate(task.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
         ) : null}
       </div>
     </>

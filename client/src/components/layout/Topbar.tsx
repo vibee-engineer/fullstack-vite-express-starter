@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { SITE } from '@/config/site';
+import { cn } from '@/lib/utils';
 import { AccountMenu } from './AccountMenu';
 import { Brand } from './Brand';
 import { SidebarNav } from './SidebarNav';
+import { TopbarNavLinks } from './TopbarNavLinks';
 import type { Account } from './account';
 
 /**
@@ -21,6 +23,7 @@ export function Topbar({
   actions,
   account,
   showBrand = false,
+  showNav = false,
 }: {
   title?: ReactNode;
   actions?: ReactNode;
@@ -33,6 +36,9 @@ export function Topbar({
    * already carries the brand).
    */
   showBrand?: boolean;
+  /** Show NAV_SECTIONS inline at md+ (canvas has no rail; without this its
+   *  destinations were reachable on mobile only). */
+  showNav?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -73,10 +79,19 @@ export function Topbar({
         </span>
       )}
 
+      {showNav ? (
+        <div className="hidden md:flex">
+          <TopbarNavLinks />
+        </div>
+      ) : null}
+
       <div className="ml-auto flex items-center gap-2">
         {actions}
         <ThemeToggle />
-        <AccountMenu account={account ?? null} />
+        {/* The sidebar shell's rail already shows the account at md+. */}
+        <div className={cn('flex', !showBrand && 'md:hidden')}>
+          <AccountMenu account={account ?? null} />
+        </div>
       </div>
     </header>
   );

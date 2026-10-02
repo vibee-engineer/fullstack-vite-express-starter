@@ -4,6 +4,7 @@ import { env } from '../env';
 
 interface HttpError {
   status?: number;
+  type?: string;
   message?: string;
   code?: string;
   details?: unknown;
@@ -30,7 +31,7 @@ export const errorMiddleware: ErrorRequestHandler = (err: HttpError, req, res, _
   res.status(status).json({
     error: {
       message,
-      code: err.code,
+      code: err.code ?? (err.type === 'entity.parse.failed' ? 'INVALID_JSON' : undefined),
       ...(err.details ? { details: err.details } : {}),
     },
   });

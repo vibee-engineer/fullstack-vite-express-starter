@@ -36,7 +36,7 @@ const notFound = (id: string) => ({
   code: 'TASK_NOT_FOUND',
 });
 
-/** GET /api/tasks?status=todo&limit=50 → { items, total } */
+/** GET /api/tasks?status=todo&limit=50&cursor= → { items, total, nextCursor } */
 tasksRouter.get(
   '/',
   validate(TaskListQuerySchema, 'query'),

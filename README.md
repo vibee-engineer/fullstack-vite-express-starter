@@ -20,10 +20,13 @@ Postgres runs on `:5432` inside the compose network. Persistence is a named volu
 
 ```bash
 # A. Real Postgres (recommended — migrations and seeds work)
-docker compose up -d db
-npm run prisma:migrate -w server   # apply server/prisma/migrations
-npm run db:seed -w server          # 1 user + 3 example tasks
-npm run dev
+#    Any local Postgres works; put its URL in server/.env, e.g.
+#    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app?schema=public
+#    (the compose `db` service does not publish 5432 to the host, so use your
+#    own Postgres here, or run everything with `docker compose up`).
+npm run prisma:migrate -w server   # apply server/prisma/migrations (reads server/.env)
+npm run db:seed -w server          # 1 user + 48 example tasks, idempotent
+npm run dev                        # open http://localhost:5173 — Vite proxies /api to :3001
 
 # B. No database at all (fastest — client work only)
 SKIP_DB=1 npm run dev
@@ -33,7 +36,7 @@ SKIP_DB=1 npm run dev
 
 ## Stack
 
-- **Client** — React 19, Vite 5, TypeScript, Tailwind v4, shadcn/Radix primitives (27 pre-installed), TanStack Query, React Router 7, react-hook-form + zod, axios, react-helmet-async.
+- **Client** — React 19, Vite 7, TypeScript, Tailwind 3.4 (`tailwind.config.ts`, not v4 `@theme`), shadcn/Radix primitives (36 pre-installed), TanStack Query, React Router 7, react-hook-form + zod, axios, react-helmet-async.
 - **Server** — Express 4, TypeScript, `tsx watch` for dev, Prisma (`@prisma/client`) + Postgres by default, Mongoose + Mongo as an opt-in variant, zod for env + request validation, pino for logs, helmet + cors baseline.
 - **Shared** — `@app/shared` workspace with zod schemas + inferred TS types consumed by both sides.
 - **Orchestration** — Docker Compose. `docker-compose.yml` for Postgres, `docker-compose.mongo.yml` overlay for Mongo, nginx as the single public port.
@@ -100,11 +103,4 @@ Deferred to the founding.dev docs. The compose file is Fly / Render / Railway co
 
 ## Known issues
 
-Two open advisories both require a **breaking major bump** and are deliberately left in place rather than silently upgraded. `npm audit fix` (non-breaking) has already been applied; CI reports `npm audit --audit-level=high` non-blocking so a new high never lands unnoticed.
-
-| Advisory                                                                                             | Package                                               | Fix requires                                                                                       | Impact here                                                                                                                                                                                      |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [GHSA-qwww-vcr4-c8h2](https://github.com/advisories/GHSA-qwww-vcr4-c8h2) (high)                      | `react-router` 7.12.0–8.2.0, via `react-router-dom@7` | `react-router@8.3+`, which drops the `react-router-dom` package entirely — a full router migration | Affects **RSC mode** action handling. This starter is a Vite SPA with `createBrowserRouter` and no RSC, so the vulnerable code path is not reachable.                                            |
-| [GHSA-67mh-4wv8-2f99](https://github.com/advisories/GHSA-67mh-4wv8-2f99) and related (moderate/high) | `esbuild` / `vite` ≤6.4.2                             | `vite@7+`, a breaking bump for the whole client toolchain                                          | All are **dev-server** issues (request reflection, `server.fs.deny` bypass on Windows paths). Never exposed in a production build; only reachable if you expose `:5173` to an untrusted network. |
-
-Bump both when you next take a toolchain upgrade — `vite@7` first, then the router migration.
+`npm audit --omit=dev` is clean as of 2026-10-02. CI reports `npm audit --audit-level=high` non-blocking so a new high never lands unnoticed.

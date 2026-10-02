@@ -92,6 +92,13 @@ export function CommandPalette({
 
   useEffect(() => setActive(0), [query, open]);
 
+  // Keep the arrow-key selection visible inside the max-h-80 scroller.
+  useEffect(() => {
+    listRef.current
+      ?.querySelector<HTMLElement>(`[data-index="${active}"]`)
+      ?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
+
   const runAt = (i: number) => {
     const cmd = results[i];
     if (!cmd) return;
@@ -137,11 +144,14 @@ export function CommandPalette({
               <button
                 key={cmd.id}
                 type="button"
+                data-index={i}
                 onMouseEnter={() => setActive(i)}
                 onClick={() => runAt(i)}
                 className={cn(
                   'flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm',
-                  i === active ? 'bg-primary/10 text-primary-ink' : 'text-foreground hover:bg-muted',
+                  i === active
+                    ? 'bg-primary/10 text-primary-ink'
+                    : 'text-foreground hover:bg-muted',
                 )}
               >
                 <NavIcon name={cmd.icon} className="h-4 w-4 shrink-0 opacity-80" />

@@ -42,6 +42,8 @@ export interface AuthRepository {
   /** Email must already be normalized (trimmed + lowercased) by the caller. */
   findUserByEmail(email: string): Promise<StoredUser | null>;
   findUserById(id: string): Promise<StoredUser | null>;
+  /** Total users — decides whether a registrant is the first (owner). */
+  countUsers(): Promise<number>;
   /** Throws `EMAIL_TAKEN` (see below) when the email collides. */
   createUser(input: NewUser): Promise<StoredUser>;
   createSession(input: StoredSession): Promise<StoredSession>;
@@ -104,6 +106,11 @@ export function createPrismaAuthRepository(): AuthRepository {
       const prisma = await db();
       const row = await prisma.user.findUnique({ where: { id } });
       return row ? toUser(row) : null;
+    },
+
+    async countUsers() {
+      const prisma = await db();
+      return prisma.user.count();
     },
 
     async createUser(input) {
@@ -188,6 +195,11 @@ export function createMongooseAuthRepository(): AuthRepository {
       return doc ? toUser(doc) : null;
     },
 
+    async countUsers() {
+      const User = await users();
+      return User.countDocuments().exec();
+    },
+
     async createUser(input) {
       const User = await users();
       try {
@@ -258,6 +270,10 @@ export function createMemoryAuthRepository(): AuthRepository {
 
     async findUserById(id) {
       return usersById.get(id) ?? null;
+    },
+
+    async countUsers() {
+      return usersById.size;
     },
 
     async createUser(input) {
