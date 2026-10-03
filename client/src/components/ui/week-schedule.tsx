@@ -238,7 +238,10 @@ export function WeekSchedule({
     for (const p of [...placed, ...overflow]) {
       firstHour = Math.min(firstHour, p.start.getHours());
       const endsNextDay = !isSameDay(p.end, p.start);
-      lastHour = Math.max(lastHour, endsNextDay ? 24 : p.end.getHours() + (p.end.getMinutes() > 0 ? 1 : 0));
+      lastHour = Math.max(
+        lastHour,
+        endsNextDay ? 24 : p.end.getHours() + (p.end.getMinutes() > 0 ? 1 : 0),
+      );
     }
   }
   firstHour = Math.max(0, firstHour);

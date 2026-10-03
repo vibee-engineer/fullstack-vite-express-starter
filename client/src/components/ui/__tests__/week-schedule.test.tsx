@@ -147,10 +147,19 @@ describe('<WeekSchedule />', () => {
     const late = ev('late', at(17, 45, 7), at(18, 30, 7));
     const early = ev('early', at(7, 30, 8), at(8, 15, 8));
     render(
-      <WeekSchedule weekStart={weekStart} days={5} events={[late, early]} now={now} startHour={8} endHour={18} />,
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[late, early]}
+        now={now}
+        startHour={8}
+        endHour={18}
+      />,
     );
     const wed = screen.getAllByRole('region', { name: 'Wednesday 7 October' })[0]!;
-    const chipBox = within(wed).getByRole('button', { name: /Patient late/ }).closest('[style]')!;
+    const chipBox = within(wed)
+      .getByRole('button', { name: /Patient late/ })
+      .closest('[style]')!;
     const top = parseFloat((chipBox as HTMLElement).style.top);
     const height = parseFloat((chipBox as HTMLElement).style.height);
     expect(top + height).toBeLessThanOrEqual(parseFloat((wed as HTMLElement).style.height));
@@ -160,7 +169,12 @@ describe('<WeekSchedule />', () => {
 
   it('gives a short session one unpadded line so its text is not sliced', () => {
     render(
-      <WeekSchedule weekStart={weekStart} days={5} events={[ev('s', at(9, 30), at(9, 45))]} now={now} />,
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[ev('s', at(9, 30), at(9, 45))]}
+        now={now}
+      />,
     );
     const chip = screen.getAllByRole('button', { name: /Patient s/ })[0]!;
     expect(chip.className).toMatch(/\bpy-0\b/);
