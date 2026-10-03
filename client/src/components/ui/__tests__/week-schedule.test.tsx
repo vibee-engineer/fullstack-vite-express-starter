@@ -140,6 +140,47 @@ describe('<WeekSchedule />', () => {
     expect(screen.getAllByText('No sessions')).toHaveLength(2);
   });
 
+  // Live clinic builds 2026-10-03: a 17:45-18:30 session on a grid ending at 18:00 was cut
+  // off at the grid's bottom edge, and 15-minute sessions rendered as 24px chips whose
+  // text was sliced through the middle.
+  it('stretches the hours to show a session that runs past endHour or starts before startHour', () => {
+    const late = ev('late', at(17, 45, 7), at(18, 30, 7));
+    const early = ev('early', at(7, 30, 8), at(8, 15, 8));
+    render(
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[late, early]}
+        now={now}
+        startHour={8}
+        endHour={18}
+      />,
+    );
+    const wed = screen.getAllByRole('region', { name: 'Wednesday 7 October' })[0]!;
+    const chipBox = within(wed)
+      .getByRole('button', { name: /Patient late/ })
+      .closest('[style]')!;
+    const top = parseFloat((chipBox as HTMLElement).style.top);
+    const height = parseFloat((chipBox as HTMLElement).style.height);
+    expect(top + height).toBeLessThanOrEqual(parseFloat((wed as HTMLElement).style.height));
+    expect(screen.getByText('18:00')).toBeInTheDocument(); // the grid now reaches 19:00
+    expect(screen.getByText('08:00')).toBeInTheDocument(); // and starts at 07:00
+  });
+
+  it('gives a short session one unpadded line so its text is not sliced', () => {
+    render(
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[ev('s', at(9, 30), at(9, 45))]}
+        now={now}
+      />,
+    );
+    const chip = screen.getAllByRole('button', { name: /Patient s/ })[0]!;
+    expect(chip.className).toMatch(/\bpy-0\b/);
+    expect(chip.className).not.toMatch(/\bpy-1\b/);
+  });
+
   it('renders the requested number of day columns', () => {
     render(<WeekSchedule weekStart={weekStart} days={5} events={[]} now={now} />);
     // each day appears once in the grid and once in the agenda

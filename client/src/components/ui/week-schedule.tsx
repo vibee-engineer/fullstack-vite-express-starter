@@ -221,9 +221,6 @@ export function WeekSchedule({
       ro?.disconnect();
     };
   }, []);
-  const hours = Array.from({ length: Math.max(1, endHour - startHour) }, (_, i) => startHour + i);
-  const gridHeight = hours.length * hourHeight;
-
   const byDay = useMemo(
     () =>
       dayList.map((day) => {
@@ -233,8 +230,27 @@ export function WeekSchedule({
     [dayList, events, cap],
   );
 
+  // startHour/endHour are the usual day, not a crop: a booked session outside them
+  // stretches the grid, because a clipped session reads as a broken calendar.
+  let firstHour = startHour;
+  let lastHour = endHour;
+  for (const { placed, overflow } of byDay) {
+    for (const p of [...placed, ...overflow]) {
+      firstHour = Math.min(firstHour, p.start.getHours());
+      const endsNextDay = !isSameDay(p.end, p.start);
+      lastHour = Math.max(
+        lastHour,
+        endsNextDay ? 24 : p.end.getHours() + (p.end.getMinutes() > 0 ? 1 : 0),
+      );
+    }
+  }
+  firstHour = Math.max(0, firstHour);
+  lastHour = Math.min(24, Math.max(lastHour, firstHour + 1));
+  const hours = Array.from({ length: lastHour - firstHour }, (_, i) => firstHour + i);
+  const gridHeight = hours.length * hourHeight;
+
   const topFor = (d: Date) => {
-    const mins = (d.getHours() - startHour) * 60 + d.getMinutes();
+    const mins = (d.getHours() - firstHour) * 60 + d.getMinutes();
     return Math.min(Math.max((mins / 60) * hourHeight, 0), gridHeight);
   };
   const heightFor = (s: Date, e: Date) => Math.max(topFor(e) - topFor(s), MIN_CHIP_PX);
@@ -254,7 +270,9 @@ export function WeekSchedule({
       aria-label={labelFor(p.event, p.start, p.end)}
       title={labelFor(p.event, p.start, p.end)}
       className={cn(
-        'flex h-full w-full flex-col overflow-hidden rounded-md border px-1.5 py-1 text-left text-xs leading-tight shadow-xs transition-colors',
+        'flex h-full w-full flex-col overflow-hidden rounded-md border px-1.5 text-left text-xs leading-tight shadow-xs transition-colors',
+        // A one-line chip can be the 24px minimum: vertical padding there slices the text.
+        oneLine ? 'justify-center py-0' : 'py-1',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         onEventClick ? 'cursor-pointer hover:brightness-95' : 'cursor-default',
         TONE[p.event.tone ?? 'primary'],
@@ -338,8 +356,8 @@ export function WeekSchedule({
                     />
                   ))}
                   {isSameDay(day, now) &&
-                    now.getHours() >= startHour &&
-                    now.getHours() < endHour && (
+                    now.getHours() >= firstHour &&
+                    now.getHours() < lastHour && (
                       <div
                         aria-hidden
                         className="absolute inset-x-0 h-0.5 bg-destructive"
