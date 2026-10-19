@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { CONTENT_WIDTH, LAYOUT, type ContentWidth, type LayoutArchetype } from '@/config/site';
 import { cn } from '@/lib/utils';
 import { AppSidebar } from './AppSidebar';
+import { ImmersiveHud } from './ImmersiveHud';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
 import type { Account } from './account';
@@ -12,17 +13,21 @@ export type { Account } from './account';
 
 /**
  * AppShell — the chrome around every AUTHENTICATED page. It composes ONE of
- * four shells based on LAYOUT in @/config/site:
+ * six shells based on LAYOUT in @/config/site:
  *
  *   'sidebar'  left rail + slim topbar + scrolling main
  *   'topbar'   horizontal nav, no rail, content clamped
  *   'focused'  slim topbar, no destination list, one centered column
  *   'canvas'   topbar + full-bleed main that does NOT scroll (the board / map /
  *              editor inside owns scrolling)
+ *   'immersive' no bar at all; full-viewport scene with a floating HUD strip
+ *              (games, players, creative tools)
+ *   'storefront' top nav with search + cart actions, wide content, no title
+ *              row (shops, catalogues, marketplaces)
  *
  * Set LAYOUT once for the app. The per-render `layout` prop exists to override
  * it, but changing chrome between routes of one app is disorienting and usually
- * wrong. None of the four has a footer and none ever should. Never
+ * wrong. None of the six has a footer and none ever should. Never
  * re-implement layout at the page level — edit @/config/site instead.
  *
  * Props:
@@ -82,6 +87,31 @@ export function AppShell({
         <Topbar title={title} actions={headerActions} account={account} showBrand showNav />
         {/* Full-bleed, non-scrolling: the canvas inside owns scroll/pan. */}
         <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+      </div>
+    );
+  }
+
+  if (archetype === 'immersive') {
+    // Games, players, creative scenes: the scene IS the app. Full viewport, no
+    // bar; a transparent HUD strip floats over it.
+    return (
+      <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
+        <ImmersiveHud actions={headerActions} account={account} />
+        <main className="h-full w-full">{children}</main>
+      </div>
+    );
+  }
+
+  if (archetype === 'storefront') {
+    // Shops, catalogues, marketplaces: top nav with search + cart in actions,
+    // wide content, and NO page-title row — storefront pages open on their own
+    // hero or product grid, not a heading over a card.
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <TopbarNav actions={headerActions} account={account} />
+        <main className="flex-1">
+          <div className="mx-auto w-full max-w-7xl px-4 md:px-6">{children}</div>
+        </main>
       </div>
     );
   }
