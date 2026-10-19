@@ -34,7 +34,7 @@ export const SITE = {
  * ------------------------------------------------------------------ */
 
 /**
- * The four app shells AppShell composes. Layout follows from information
+ * The seven app shells AppShell composes. Layout follows from information
  * architecture, not house style. A 256px rail holding two links, beside content
  * that has nowhere to go, is the clearest tell of a generated app.
  *
@@ -46,12 +46,29 @@ export const SITE = {
  *              wizard, or a flow where nav is a distraction. Typeform, iA Writer.
  *   'canvas'   Topbar + full-bleed main that does NOT scroll — the board, map or
  *              editor inside owns the viewport. Figma, Miro, Trello, Calendar.
+ *   'immersive' No bar: the scene fills the viewport and a transparent HUD
+ *              strip floats over it. Games, players, creative scenes.
+ *              Krunker, Spotify's now-playing, Procreate.
+ *   'storefront' Top nav carrying search + cart, wide content, no page-title
+ *              row; pages open on a hero or product grid. Shops, catalogues,
+ *              marketplaces. Allbirds, Etsy. Admin screens belong under
+ *              /admin in a 'sidebar' override, not in the shop chrome.
+ *   'dock'     Slim bar, one column, and a bottom dock of 3-5 destinations
+ *              in thumb reach. Phone-first personal apps: trackers, journals,
+ *              personal money, fitness. Strava, Streaks, Monzo.
  *
  * For a list-beside-record view (inbox, CRM, tracker, pipeline) use the
  * <ListDetail> component INSIDE whichever archetype you picked — it is not a
  * fifth shell and composes with all of them.
  */
-export type LayoutArchetype = 'sidebar' | 'topbar' | 'focused' | 'canvas';
+export type LayoutArchetype =
+  | 'sidebar'
+  | 'topbar'
+  | 'focused'
+  | 'canvas'
+  | 'immersive'
+  | 'storefront'
+  | 'dock';
 
 /** THIS APP's shell. Set it deliberately on turn 0, from the brief. */
 export const LAYOUT: LayoutArchetype = 'sidebar';

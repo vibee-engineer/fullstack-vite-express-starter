@@ -4,6 +4,8 @@ import { useLocation } from 'react-router-dom';
 import { CONTENT_WIDTH, LAYOUT, type ContentWidth, type LayoutArchetype } from '@/config/site';
 import { cn } from '@/lib/utils';
 import { AppSidebar } from './AppSidebar';
+import { BottomDock, dockItems } from './BottomDock';
+import { ImmersiveHud } from './ImmersiveHud';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
 import type { Account } from './account';
@@ -12,17 +14,23 @@ export type { Account } from './account';
 
 /**
  * AppShell — the chrome around every AUTHENTICATED page. It composes ONE of
- * four shells based on LAYOUT in @/config/site:
+ * seven shells based on LAYOUT in @/config/site:
  *
  *   'sidebar'  left rail + slim topbar + scrolling main
  *   'topbar'   horizontal nav, no rail, content clamped
  *   'focused'  slim topbar, no destination list, one centered column
  *   'canvas'   topbar + full-bleed main that does NOT scroll (the board / map /
  *              editor inside owns scrolling)
+ *   'immersive' no bar at all; full-viewport scene with a floating HUD strip
+ *              (games, players, creative tools)
+ *   'storefront' top nav with search + cart actions, wide content, no title
+ *              row (shops, catalogues, marketplaces)
+ *   'dock'     slim top bar + one column + a bottom dock of 3-5 destinations
+ *              (phone-first: trackers, journals, personal money, fitness)
  *
  * Set LAYOUT once for the app. The per-render `layout` prop exists to override
  * it, but changing chrome between routes of one app is disorienting and usually
- * wrong. None of the four has a footer and none ever should. Never
+ * wrong. None of the seven has a footer and none ever should. Never
  * re-implement layout at the page level — edit @/config/site instead.
  *
  * Props:
@@ -86,11 +94,53 @@ export function AppShell({
     );
   }
 
-  if (archetype === 'topbar') {
+  if (archetype === 'immersive') {
+    // Games, players, creative scenes: the scene IS the app. Full viewport, no
+    // bar; a transparent HUD strip floats over it.
+    return (
+      <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
+        <ImmersiveHud actions={headerActions} account={account} />
+        <main className="h-full w-full">{children}</main>
+      </div>
+    );
+  }
+
+  if (archetype === 'dock') {
+    // Phone-first: destinations in a thumb-reach dock, one readable column,
+    // bottom padding so the last row never hides under the dock.
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Topbar title={title} actions={headerActions} account={account} showBrand />
+        <main className="flex-1 pb-24">
+          <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-6">{children}</div>
+        </main>
+        <BottomDock />
+      </div>
+    );
+  }
+
+  if (archetype === 'storefront') {
+    // Shops, catalogues, marketplaces: top nav with search + cart in actions,
+    // wide content, and NO page-title row — storefront pages open on their own
+    // hero or product grid, not a heading over a card.
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <TopbarNav actions={headerActions} account={account} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1">
+          <div className="mx-auto w-full max-w-7xl px-4 md:px-6">{children}</div>
+        </main>
+      </div>
+    );
+  }
+
+  if (archetype === 'topbar') {
+    // Phones: 2-5 places sit in a bottom dock at thumb reach, not a hamburger.
+    const count = dockItems().length;
+    const phoneDock = count >= 2 && count <= 5;
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <TopbarNav actions={headerActions} account={account} phoneDock={phoneDock} />
+        <main className={cn('flex-1 overflow-y-auto', phoneDock && 'pb-24 md:pb-0')}>
           <div
             className={cn(
               'mx-auto w-full max-w-7xl px-4 py-6 md:px-6',
@@ -101,6 +151,7 @@ export function AppShell({
             {children}
           </div>
         </main>
+        {phoneDock ? <BottomDock phoneOnly /> : null}
       </div>
     );
   }

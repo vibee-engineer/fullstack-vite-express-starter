@@ -65,7 +65,32 @@ const config: Config = {
           foreground: 'hsl(var(--card-foreground))',
         },
       },
+      // Component SHAPE tokens (founding.dev looks). Every primitive used to
+      // hard-code the same h-10 / rounded-md / font-medium / shadow-xs, so every
+      // app's buttons and inputs were identical whatever its palette. A look's
+      // tokens.css now sets these; each fallback is the old fixed value, so an
+      // app whose tokens.css predates them renders exactly as before.
+      height: {
+        control: 'var(--control-h, 2.5rem)',
+        'control-sm': 'calc(var(--control-h, 2.5rem) - 0.25rem)',
+        'control-lg': 'calc(var(--control-h, 2.5rem) + 0.25rem)',
+      },
+      width: {
+        control: 'var(--control-h, 2.5rem)',
+      },
+      fontWeight: {
+        control: 'var(--control-weight, 500)',
+      },
+      letterSpacing: {
+        control: 'var(--control-tracking, normal)',
+      },
+      borderWidth: {
+        control: 'var(--control-border, 1px)',
+        card: 'var(--card-border, 1px)',
+      },
       borderRadius: {
+        control: 'var(--control-radius, calc(var(--radius) - 2px))',
+        card: 'var(--card-radius, calc(var(--radius) + 4px))',
         '2xl': 'calc(var(--radius) + 8px)',
         xl: 'calc(var(--radius) + 4px)',
         lg: 'var(--radius)',
@@ -83,6 +108,8 @@ const config: Config = {
         lg: 'var(--shadow-lg)',
         xl: 'var(--shadow-xl)',
         focus: 'var(--shadow-focus)',
+        control: 'var(--control-shadow, var(--shadow-xs))',
+        card: 'var(--card-shadow, var(--shadow-sm))',
         none: 'none',
       },
       transitionTimingFunction: {

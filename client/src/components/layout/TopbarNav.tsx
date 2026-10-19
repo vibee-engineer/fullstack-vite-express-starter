@@ -16,7 +16,7 @@ import type { Account } from './account';
  * left rail. Below md the destinations collapse into the SAME SidebarNav
  * Sheet used by every other shell. Composed BY AppShell.
  */
-export function TopbarNav({ actions, account }: { actions?: ReactNode; account?: Account }) {
+export function TopbarNav({ actions, account, phoneDock = false }: { actions?: ReactNode; account?: Account; phoneDock?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -32,8 +32,8 @@ export function TopbarNav({ actions, account }: { actions?: ReactNode; account?:
         <ThemeToggle />
         <AccountMenu account={account ?? null} />
 
-        {/* Mobile menu */}
-        <Sheet open={open} onOpenChange={setOpen}>
+        {/* Mobile menu (a phone dock replaces it when the app has 2-5 places) */}
+        {phoneDock ? null : <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
               <Menu className="h-5 w-5" />
@@ -45,7 +45,7 @@ export function TopbarNav({ actions, account }: { actions?: ReactNode; account?:
             </SheetTitle>
             <SidebarNav onNavigate={() => setOpen(false)} />
           </SheetContent>
-        </Sheet>
+        </Sheet>}
       </div>
     </header>
   );

@@ -1,5 +1,27 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+/*
+ * tailwind-merge must know the look's shape keys (tailwind.config.ts: control /
+ * card). Unknown to it, `border-control` read as a border COLOUR and was dropped
+ * next to `border-input`, so every input and card lost its border; and a page's
+ * `h-12` could not override `h-control`.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      borderWidth: ['control', 'card'],
+      borderRadius: ['control', 'card'],
+    },
+    classGroups: {
+      shadow: [{ shadow: ['control', 'card'] }],
+      'font-weight': [{ font: ['control'] }],
+      tracking: [{ tracking: ['control'] }],
+      h: [{ h: ['control', 'control-sm', 'control-lg'] }],
+      w: [{ w: ['control'] }],
+    },
+  },
+});
 
 /** Tailwind-safe className concatenator. Used by every shadcn primitive. */
 export function cn(...inputs: ClassValue[]): string {
