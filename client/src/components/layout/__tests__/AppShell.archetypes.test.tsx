@@ -41,3 +41,13 @@ describe('AppShell archetypes', () => {
     expect(screen.getByText('Page title')).toBeInTheDocument();
   });
 });
+
+describe('AppShell dock', () => {
+  it("'dock' renders a bottom nav of destinations and no rail", () => {
+    const { container } = shell('dock');
+    expect(container.querySelector('aside')).toBeNull();
+    const nav = screen.getByRole('navigation', { name: 'Main' });
+    expect(nav.className).toMatch(/bottom-0/);
+    expect(nav.querySelectorAll('a').length).toBeGreaterThan(0);
+  });
+});

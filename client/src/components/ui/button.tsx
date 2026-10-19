@@ -8,26 +8,26 @@ const buttonVariants = cva(
   // Base: a considered focus ring (offset, brand-tinted), a press that presses
   // (active:scale), and transitions scoped to the properties that change — never
   // `transition-all`. Motion is fast (120ms) so it feels instant, not floaty.
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-[background-color,box-shadow,transform,border-color,color] duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 select-none',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-control tracking-control [text-transform:var(--control-case,none)] ring-offset-background transition-[background-color,box-shadow,transform,border-color,color] duration-fast ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 select-none',
   {
     variants: {
       variant: {
         // Solid actions carry a subtle elevation that lifts a touch on hover —
         // the "this is the primary thing" cue, not a flat rectangle.
-        default: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 hover:shadow-sm',
+        default: 'bg-primary text-primary-foreground shadow-control hover:bg-primary/90 hover:shadow-sm',
         destructive:
-          'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 hover:shadow-sm',
+          'bg-destructive text-destructive-foreground shadow-control hover:bg-destructive/90 hover:shadow-sm',
         outline:
-          'border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground hover:border-border',
+          'border-control border-input bg-background shadow-control hover:bg-accent hover:text-accent-foreground hover:border-border',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
         link: 'text-primary-ink underline-offset-4 hover:underline',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3 text-[0.8125rem]',
-        lg: 'h-11 rounded-lg px-8',
-        icon: 'h-10 w-10',
+        default: 'h-control px-4 py-2',
+        sm: 'h-control-sm px-3 text-[0.8125rem]',
+        lg: 'h-control-lg px-8',
+        icon: 'h-control w-control',
       },
     },
     defaultVariants: { variant: 'default', size: 'default' },

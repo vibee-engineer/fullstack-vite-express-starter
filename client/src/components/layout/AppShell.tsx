@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { CONTENT_WIDTH, LAYOUT, type ContentWidth, type LayoutArchetype } from '@/config/site';
 import { cn } from '@/lib/utils';
 import { AppSidebar } from './AppSidebar';
+import { BottomDock } from './BottomDock';
 import { ImmersiveHud } from './ImmersiveHud';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
@@ -13,7 +14,7 @@ export type { Account } from './account';
 
 /**
  * AppShell — the chrome around every AUTHENTICATED page. It composes ONE of
- * six shells based on LAYOUT in @/config/site:
+ * seven shells based on LAYOUT in @/config/site:
  *
  *   'sidebar'  left rail + slim topbar + scrolling main
  *   'topbar'   horizontal nav, no rail, content clamped
@@ -24,10 +25,12 @@ export type { Account } from './account';
  *              (games, players, creative tools)
  *   'storefront' top nav with search + cart actions, wide content, no title
  *              row (shops, catalogues, marketplaces)
+ *   'dock'     slim top bar + one column + a bottom dock of 3-5 destinations
+ *              (phone-first: trackers, journals, personal money, fitness)
  *
  * Set LAYOUT once for the app. The per-render `layout` prop exists to override
  * it, but changing chrome between routes of one app is disorienting and usually
- * wrong. None of the six has a footer and none ever should. Never
+ * wrong. None of the seven has a footer and none ever should. Never
  * re-implement layout at the page level — edit @/config/site instead.
  *
  * Props:
@@ -98,6 +101,20 @@ export function AppShell({
       <div className="relative h-dvh w-full overflow-hidden bg-background text-foreground">
         <ImmersiveHud actions={headerActions} account={account} />
         <main className="h-full w-full">{children}</main>
+      </div>
+    );
+  }
+
+  if (archetype === 'dock') {
+    // Phone-first: destinations in a thumb-reach dock, one readable column,
+    // bottom padding so the last row never hides under the dock.
+    return (
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <Topbar title={title} actions={headerActions} account={account} showBrand />
+        <main className="flex-1 pb-24">
+          <div className="mx-auto w-full max-w-2xl px-4 py-6 md:px-6">{children}</div>
+        </main>
+        <BottomDock />
       </div>
     );
   }
