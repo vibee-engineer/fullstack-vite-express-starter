@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { CONTENT_WIDTH, LAYOUT, type ContentWidth, type LayoutArchetype } from '@/config/site';
 import { cn } from '@/lib/utils';
 import { AppSidebar } from './AppSidebar';
-import { BottomDock } from './BottomDock';
+import { BottomDock, dockItems } from './BottomDock';
 import { ImmersiveHud } from './ImmersiveHud';
 import { Topbar } from './Topbar';
 import { TopbarNav } from './TopbarNav';
@@ -134,10 +134,13 @@ export function AppShell({
   }
 
   if (archetype === 'topbar') {
+    // Phones: 2-5 places sit in a bottom dock at thumb reach, not a hamburger.
+    const count = dockItems().length;
+    const phoneDock = count >= 2 && count <= 5;
     return (
       <div className="flex min-h-screen flex-col bg-background text-foreground">
-        <TopbarNav actions={headerActions} account={account} />
-        <main className="flex-1 overflow-y-auto">
+        <TopbarNav actions={headerActions} account={account} phoneDock={phoneDock} />
+        <main className={cn('flex-1 overflow-y-auto', phoneDock && 'pb-24 md:pb-0')}>
           <div
             className={cn(
               'mx-auto w-full max-w-7xl px-4 py-6 md:px-6',
@@ -148,6 +151,7 @@ export function AppShell({
             {children}
           </div>
         </main>
+        {phoneDock ? <BottomDock phoneOnly /> : null}
       </div>
     );
   }

@@ -14,12 +14,27 @@ import { NavIcon } from './nav-icons';
  * Reads the same NAV_SECTIONS as every other shell. Five destinations is the
  * comfortable maximum for a dock; more belong in a sidebar app.
  */
-export function BottomDock() {
-  const items = NAV_SECTIONS.flatMap((s) => s.items).filter((i) => !i.external).slice(0, 5);
+export function dockItems() {
+  return NAV_SECTIONS.flatMap((s) => s.items).filter((i) => !i.external);
+}
+
+/**
+ * phoneOnly: the 'topbar' shell's phone navigation. Below md it replaces the
+ * hamburger with this dock (a thumb-reach tab bar for apps with 2-5 places,
+ * the way NYT Cooking, Airbnb and Resy work on phones); md and up keep the
+ * horizontal nav and render nothing here.
+ */
+export function BottomDock({ phoneOnly = false }: { phoneOnly?: boolean } = {}) {
+  const items = dockItems().slice(0, 5);
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/75 md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:border md:px-2 md:shadow-lg"
+      className={cn(
+        'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/75',
+        phoneOnly
+          ? 'md:hidden'
+          : 'md:inset-x-auto md:bottom-4 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:border md:px-2 md:shadow-lg',
+      )}
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-around md:gap-1">
         {items.map((item) => (
