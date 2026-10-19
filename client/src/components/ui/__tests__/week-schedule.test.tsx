@@ -11,7 +11,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { layoutDay, WeekSchedule, type ScheduleEvent } from '../week-schedule';
+import { dropStart, layoutDay, WeekSchedule, type ScheduleEvent } from '../week-schedule';
 
 const at = (h: number, m = 0, day = 6) => new Date(2026, 9, day, h, m);
 const ev = (id: string, s: Date, e: Date, extra: Partial<ScheduleEvent> = {}): ScheduleEvent => ({
@@ -84,6 +84,21 @@ describe('layoutDay', () => {
   });
 });
 
+describe('dropStart', () => {
+  const opts = { firstHour: 7, lastHour: 19, hourHeight: 56, snapMinutes: 15, durationMinutes: 45 };
+  const day = new Date(2026, 9, 7, 15, 30);
+
+  it('maps the chip top to a time on the drop day, snapped to the grid', () => {
+    expect(dropStart(day, 56 * 3, opts)).toEqual(new Date(2026, 9, 7, 10, 0));
+    expect(dropStart(day, 56 * 3 + 20, opts)).toEqual(new Date(2026, 9, 7, 10, 15));
+  });
+
+  it('keeps the session inside the grid at both ends', () => {
+    expect(dropStart(day, -40, opts)).toEqual(new Date(2026, 9, 7, 7, 0));
+    expect(dropStart(day, 56 * 30, opts)).toEqual(new Date(2026, 9, 7, 18, 15));
+  });
+});
+
 describe('<WeekSchedule />', () => {
   const weekStart = new Date(2026, 9, 5); // Monday 5 October 2026
   const now = new Date(2026, 9, 6, 12, 0);
@@ -106,6 +121,54 @@ describe('<WeekSchedule />', () => {
     });
     fireEvent.click(chip);
     expect(onEventClick).toHaveBeenCalledWith(e);
+  });
+
+  it('drags a session to another day and time, keeping its length', () => {
+    // jsdom has no DragEvent, and without one fireEvent drops clientY.
+    if (typeof window.DragEvent === 'undefined') {
+      (window as unknown as { DragEvent: typeof MouseEvent }).DragEvent = class extends MouseEvent {};
+    }
+    const onEventMove = vi.fn();
+    const e = ev('a', at(9), at(9, 45), { title: 'Maya Chen' });
+    render(
+      <WeekSchedule weekStart={weekStart} days={5} events={[e]} now={now} onEventMove={onEventMove} />,
+    );
+    const tuesday = screen.getAllByRole('region', { name: 'Tuesday 6 October' })[0]!;
+    const chip = within(tuesday).getByRole('button', { name: /Maya Chen/ });
+    expect(chip).toHaveAttribute('draggable', 'true');
+    const dataTransfer = { setData: vi.fn(), effectAllowed: '', dropEffect: '' };
+    fireEvent.dragStart(chip, { clientY: 0, dataTransfer });
+    const thursday = screen.getAllByRole('region', { name: 'Thursday 8 October' })[0]!;
+    fireEvent.dragOver(thursday, { clientY: 56 * 4, dataTransfer });
+    fireEvent.drop(thursday, { clientY: 56 * 4, dataTransfer });
+    expect(onEventMove).toHaveBeenCalledWith(e, new Date(2026, 9, 8, 11, 0), new Date(2026, 9, 8, 11, 45));
+  });
+
+  it('leaves chips undraggable without onEventMove, and cancelled ones always', () => {
+    render(
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[ev('a', at(9), at(10)), ev('b', at(11), at(12), { cancelled: true })]}
+        now={now}
+      />,
+    );
+    const tuesday = screen.getAllByRole('region', { name: 'Tuesday 6 October' })[0]!;
+    for (const b of within(tuesday).getAllByRole('button')) expect(b).not.toHaveAttribute('draggable');
+  });
+
+  it('never makes a cancelled session draggable', () => {
+    render(
+      <WeekSchedule
+        weekStart={weekStart}
+        days={5}
+        events={[ev('b', at(11), at(12), { cancelled: true })]}
+        now={now}
+        onEventMove={vi.fn()}
+      />,
+    );
+    const tuesday = screen.getAllByRole('region', { name: 'Tuesday 6 October' })[0]!;
+    expect(within(tuesday).getByRole('button', { name: /cancelled/ })).not.toHaveAttribute('draggable');
   });
 
   it('shows a "+N more" chip instead of squeezing a busy hour', () => {

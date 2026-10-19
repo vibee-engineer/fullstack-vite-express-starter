@@ -20,6 +20,11 @@ import { cn } from '@/lib/utils';
  * The PARENT owns the data: pass `events` for the visible week and handle
  * `onEventClick`. Filter per staff member in the parent (one person's week is
  * the readable default for a staff calendar).
+ *
+ * Drag-to-reschedule: pass `onEventMove(event, start, end)` and chips become
+ * draggable onto any day column; the drop snaps to `snapMinutes` and keeps the
+ * duration. The parent validates (clashes, working hours) and saves, so a
+ * brief that asks for drag never needs a hand-rolled grid.
  */
 
 /** primary / muted / destructive, or a chart-N token to colour by staff member or service */
@@ -141,6 +146,28 @@ export function layoutDay(
   return { placed, overflow };
 }
 
+/**
+ * dropStart — where a dragged chip lands. `y` is the chip's new top edge in px
+ * from the top of the day column. Pure, so it is unit-tested directly.
+ */
+export function dropStart(
+  day: Date,
+  y: number,
+  { firstHour, lastHour, hourHeight, snapMinutes, durationMinutes }: {
+    firstHour: number;
+    lastHour: number;
+    hourHeight: number;
+    snapMinutes: number;
+    durationMinutes: number;
+  },
+): Date {
+  const snap = Math.max(1, snapMinutes);
+  const raw = (y / hourHeight) * 60;
+  const latest = (lastHour - firstHour) * 60 - durationMinutes;
+  const mins = Math.min(Math.max(Math.round(raw / snap) * snap, 0), Math.max(latest, 0));
+  return new Date(startOfDay(day).getTime() + (firstHour * 60 + mins) * 60_000);
+}
+
 const TONE: Record<ScheduleTone, string> = {
   default: 'border-border bg-card text-card-foreground',
   primary: 'border-primary/40 bg-primary/10 text-foreground',
@@ -168,6 +195,10 @@ type WeekScheduleProps = {
   /** column cap per overlapping cluster; default 3 for 5 days or fewer, else 2 */
   maxColumns?: number;
   onEventClick?: (event: ScheduleEvent) => void;
+  /** turns on drag-to-reschedule; called with the snapped new start and end */
+  onEventMove?: (event: ScheduleEvent, start: Date, end: Date) => void;
+  /** drop grid in minutes, default 15 */
+  snapMinutes?: number;
   /** time format, default 24h "HH:mm" */
   formatTime?: (d: Date) => string;
   /** override the chip body; the chip itself (position, label, click) stays ours */
@@ -193,6 +224,8 @@ export function WeekSchedule({
   hourHeight = 56,
   maxColumns,
   onEventClick,
+  onEventMove,
+  snapMinutes = 15,
   formatTime = (d) => format(d, 'HH:mm'),
   renderEvent,
   now = new Date(),
@@ -221,6 +254,10 @@ export function WeekSchedule({
       ro?.disconnect();
     };
   }, []);
+  // The grab point inside the chip, so the chip lands where the pointer let go
+  // of it rather than snapping its top edge to the cursor.
+  const drag = useRef<{ event: ScheduleEvent; grabY: number; durationMinutes: number } | null>(null);
+  const [dropDay, setDropDay] = useState<string | null>(null);
   const byDay = useMemo(
     () =>
       dayList.map((day) => {
@@ -263,9 +300,26 @@ export function WeekSchedule({
     p: { event: ScheduleEvent; start: Date; end: Date },
     compact: boolean,
     oneLine = false,
+    movable = false,
   ) => (
     <button
       type="button"
+      draggable={movable || undefined}
+      onDragStart={
+        movable
+          ? (e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              drag.current = {
+                event: p.event,
+                grabY: e.clientY - rect.top,
+                durationMinutes: Math.round((p.end.getTime() - p.start.getTime()) / 60_000),
+              };
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('text/plain', p.event.id);
+            }
+          : undefined
+      }
+      onDragEnd={movable ? () => { drag.current = null; setDropDay(null); } : undefined}
       onClick={onEventClick ? () => onEventClick(p.event) : undefined}
       aria-label={labelFor(p.event, p.start, p.end)}
       title={labelFor(p.event, p.start, p.end)}
@@ -275,6 +329,7 @@ export function WeekSchedule({
         oneLine ? 'justify-center py-0' : 'py-1',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         onEventClick ? 'cursor-pointer hover:brightness-95' : 'cursor-default',
+        movable && 'cursor-grab active:cursor-grabbing',
         TONE[p.event.tone ?? 'primary'],
         p.event.cancelled && 'border-dashed opacity-70 line-through',
       )}
@@ -344,8 +399,42 @@ export function WeekSchedule({
                   className={cn(
                     'relative border-l border-border',
                     isSameDay(day, now) && 'bg-primary/5',
+                    dropDay === day.toISOString() && 'bg-primary/10',
                   )}
                   style={{ height: gridHeight }}
+                  onDragOver={
+                    onEventMove
+                      ? (e) => {
+                          if (!drag.current) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDropDay(day.toISOString());
+                        }
+                      : undefined
+                  }
+                  onDragLeave={onEventMove ? () => setDropDay(null) : undefined}
+                  onDrop={
+                    onEventMove
+                      ? (e) => {
+                          const d = drag.current;
+                          drag.current = null;
+                          setDropDay(null);
+                          if (!d) return;
+                          e.preventDefault();
+                          const top = e.clientY - e.currentTarget.getBoundingClientRect().top - d.grabY;
+                          if (!Number.isFinite(top)) return;
+                          const start = dropStart(day, top, {
+                            firstHour,
+                            lastHour,
+                            hourHeight,
+                            snapMinutes,
+                            durationMinutes: d.durationMinutes,
+                          });
+                          const end = new Date(start.getTime() + d.durationMinutes * 60_000);
+                          onEventMove(d.event, start, end);
+                        }
+                      : undefined
+                  }
                 >
                   {hours.map((h, i) => (
                     <div
@@ -383,6 +472,7 @@ export function WeekSchedule({
                           p,
                           p.cols > 1 || heightFor(p.start, p.end) < 44,
                           heightFor(p.start, p.end) < 40,
+                          !!onEventMove && !p.event.cancelled,
                         )}
                       </div>
                     </div>
