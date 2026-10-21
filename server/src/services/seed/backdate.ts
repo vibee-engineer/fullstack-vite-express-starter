@@ -9,6 +9,8 @@
  * period-over-period delta all TRUE — computed from real history, not invented.
  */
 
+import { atTime, startOfZonedDay, TIME_ZONE, zoned } from '@shared/time';
+
 import type { SeededRandom } from './random';
 
 export interface BackdateOptions {
@@ -86,6 +88,8 @@ export interface ScheduleOptions {
   businessDays?: boolean;
   /** Reference "now"; injectable for deterministic tests. Default new Date(). */
   now?: Date;
+  /** The business's IANA zone for "today", weekends and business hours. Default TIME_ZONE. */
+  timeZone?: string;
 }
 
 const clampNum = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
@@ -114,20 +118,21 @@ export function scheduleSeries(
     upcomingRatio = 0.55,
     businessDays = true,
     now = new Date(),
+    timeZone = TIME_ZONE,
   } = opts;
   if (count <= 0) return [];
 
   const nowMs = now.getTime();
   const backStart = nowMs - Math.max(0, daysBack) * MS_PER_DAY;
   const fwdEnd = nowMs + Math.max(0, daysForward) * MS_PER_DAY;
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
+  // "Today" and business hours are the business's, not the UTC server's.
+  const startOfToday = startOfZonedDay(now, timeZone);
 
   const upcomingCount = Math.round(count * clampNum(upcomingRatio, 0, 1));
 
   const nudgeBusinessDay = (t: number): number => {
     if (!businessDays) return t;
-    const day = new Date(t).getUTCDay();
+    const day = zoned(t, timeZone).getDay();
     if (day === 0) return t + MS_PER_DAY; // Sunday -> Monday (forward, so events stay upcoming)
     if (day === 6) return t - MS_PER_DAY; // Saturday -> Friday
     return t;
@@ -139,7 +144,7 @@ export function scheduleSeries(
     if (i === 0) {
       // Anchor (counts toward the upcoming allocation): a business-hour time
       // TODAY, so the "today" view always has at least one row.
-      t = startOfToday.getTime() + (8 + rng.int(0, 9)) * 60 * 60 * 1000; // 08:00–17:00 today
+      t = atTime(startOfToday, `${8 + rng.int(0, 9)}:00`, timeZone).getTime(); // 08:00–17:00 today
     } else if (i < upcomingCount) {
       // Upcoming: [now, fwdEnd], denser near now (soon-first) via position^1.5.
       const p = rng.next() ** 1.5;
