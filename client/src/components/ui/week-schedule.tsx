@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { addDays, format, isSameDay, startOfDay } from 'date-fns';
+import { TZDate } from '@date-fns/tz';
+import { TIME_ZONE, zoned } from '@shared/time';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -20,6 +22,10 @@ import { cn } from '@/lib/utils';
  * The PARENT owns the data: pass `events` for the visible week and handle
  * `onEventClick`. Filter per staff member in the parent (one person's week is
  * the readable default for a staff calendar).
+ *
+ * Days, rows and labels are on the BUSINESS's clock (`timeZone`, default
+ * TIME_ZONE from @shared/time), so a 6:30 class sits on the 6:30 row for a
+ * viewer anywhere. Build event times with `atTime` from @shared/time.
  */
 
 /** primary / muted / destructive, or a chart-N token to colour by staff member or service */
@@ -66,7 +72,11 @@ export type OverflowMarker = {
   cols: number;
 };
 
-const toDate = (d: Date | string) => (d instanceof Date ? d : new Date(d));
+/** `d` as a Date, on `timeZone`'s clock when one is given (null = the viewer's). */
+const toDate = (d: Date | string, timeZone?: string | null) =>
+  timeZone ? zoned(d, timeZone) : new Date(d instanceof Date ? d.getTime() : d);
+const fromMs = (ms: number, timeZone?: string | null) =>
+  timeZone ? new TZDate(ms, timeZone) : new Date(ms);
 
 /**
  * layoutDay — columns for one day's events. Pure, so it is unit-tested directly.
@@ -80,12 +90,19 @@ const toDate = (d: Date | string) => (d instanceof Date ? d : new Date(d));
 export function layoutDay(
   events: ScheduleEvent[],
   maxColumns = 3,
+  timeZone?: string | null,
 ): { placed: PositionedEvent[]; overflow: OverflowMarker[] } {
   const cap = Math.max(1, Math.floor(maxColumns));
   const items = events
-    .map((event) => ({ event, start: toDate(event.start), end: toDate(event.end) }))
+    .map((event) => ({
+      event,
+      start: toDate(event.start, timeZone),
+      end: toDate(event.end, timeZone),
+    }))
     .filter((x) => !Number.isNaN(x.start.getTime()) && !Number.isNaN(x.end.getTime()))
-    .map((x) => (x.end <= x.start ? { ...x, end: new Date(x.start.getTime() + 15 * 60_000) } : x))
+    .map((x) =>
+      x.end <= x.start ? { ...x, end: fromMs(x.start.getTime() + 15 * 60_000, timeZone) } : x,
+    )
     .sort(
       (a, b) =>
         a.start.getTime() - b.start.getTime() ||
@@ -113,8 +130,8 @@ export function layoutDay(
       }
       overflow.push({
         events: hidden.map((h) => h.event),
-        start: new Date(Math.min(...hidden.map((h) => h.start.getTime()))),
-        end: new Date(Math.max(...hidden.map((h) => h.end.getTime()))),
+        start: fromMs(Math.min(...hidden.map((h) => h.start.getTime())), timeZone),
+        end: fromMs(Math.max(...hidden.map((h) => h.end.getTime())), timeZone),
         col: keep,
         cols: cap,
       });
@@ -179,6 +196,8 @@ type WeekScheduleProps = {
   now?: Date;
   /** shown in the agenda for a day with nothing on it */
   emptyDayLabel?: string;
+  /** the business's IANA zone the grid is drawn in; default TIME_ZONE, null = the viewer's clock */
+  timeZone?: string | null;
   className?: string;
 };
 
@@ -195,13 +214,18 @@ export function WeekSchedule({
   onEventClick,
   formatTime = (d) => format(d, 'HH:mm'),
   renderEvent,
-  now = new Date(),
+  now: nowProp,
   emptyDayLabel = 'Nothing booked',
+  timeZone = TIME_ZONE,
   className,
 }: WeekScheduleProps) {
+  const now = toDate(nowProp ?? new Date(), timeZone);
   const dayList = useMemo(
-    () => Array.from({ length: Math.max(1, days) }, (_, i) => addDays(startOfDay(weekStart), i)),
-    [weekStart, days],
+    () =>
+      Array.from({ length: Math.max(1, days) }, (_, i) =>
+        addDays(startOfDay(toDate(weekStart, timeZone)), i),
+      ),
+    [weekStart, days, timeZone],
   );
   const cap = maxColumns ?? (days <= 5 ? 3 : 2);
   // The edge fade is a scroll affordance, so it shows only when the grid really
@@ -224,10 +248,10 @@ export function WeekSchedule({
   const byDay = useMemo(
     () =>
       dayList.map((day) => {
-        const mine = events.filter((e) => isSameDay(toDate(e.start), day));
-        return { day, events: mine, ...layoutDay(mine, cap) };
+        const mine = events.filter((e) => isSameDay(toDate(e.start, timeZone), day));
+        return { day, events: mine, ...layoutDay(mine, cap, timeZone) };
       }),
-    [dayList, events, cap],
+    [dayList, events, cap, timeZone],
   );
 
   // startHour/endHour are the usual day, not a crop: a booked session outside them
@@ -411,8 +435,8 @@ export function WeekSchedule({
                         <PopoverContent className="w-64 p-2" align="start">
                           <ul className="space-y-1">
                             {o.events.map((ev) => {
-                              const s = toDate(ev.start);
-                              const e = toDate(ev.end);
+                              const s = toDate(ev.start, timeZone);
+                              const e = toDate(ev.end, timeZone);
                               return (
                                 <li key={ev.id} className="h-12">
                                   {chip({ event: ev, start: s, end: e }, false)}
@@ -442,7 +466,7 @@ export function WeekSchedule({
       <div className="space-y-4 md:hidden">
         {byDay.map(({ day, events: mine }) => {
           const sorted = [...mine].sort(
-            (a, b) => toDate(a.start).getTime() - toDate(b.start).getTime(),
+            (a, b) => toDate(a.start, timeZone).getTime() - toDate(b.start, timeZone).getTime(),
           );
           return (
             <section key={day.toISOString()} aria-label={format(day, 'EEEE d MMMM')}>
@@ -460,7 +484,14 @@ export function WeekSchedule({
                 <ul className="space-y-1.5">
                   {sorted.map((ev) => (
                     <li key={ev.id} className="h-12">
-                      {chip({ event: ev, start: toDate(ev.start), end: toDate(ev.end) }, false)}
+                      {chip(
+                        {
+                          event: ev,
+                          start: toDate(ev.start, timeZone),
+                          end: toDate(ev.end, timeZone),
+                        },
+                        false,
+                      )}
                     </li>
                   ))}
                 </ul>

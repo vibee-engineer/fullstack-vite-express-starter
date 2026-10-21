@@ -9,13 +9,16 @@
     ".": "./src/index.ts",
     "./schemas": "./src/schemas.ts",
     "./schemas/task": "./src/schemas/task.ts",
-    "./types": "./src/types.ts"
+    "./types": "./src/types.ts",
+    "./time": "./src/time.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
+    "date-fns": "^4.4.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
