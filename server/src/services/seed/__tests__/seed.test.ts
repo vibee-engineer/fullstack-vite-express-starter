@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { SeededRandom } from '../random';
+import { startOfZonedDay, zoned } from '@shared/time';
+
 import { backdateSeries, scheduleSeries, monthlyBuckets } from '../backdate';
 import { defineFactory, Factory } from '../factory';
 
@@ -124,11 +126,8 @@ describe('backdateSeries', () => {
 
 describe('scheduleSeries — forward-dated events never leave "today" empty', () => {
   const now = new Date('2026-06-15T12:00:00.000Z'); // a Monday
-  const startOfToday = (() => {
-    const d = new Date(now);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  })();
+  // today on the business's clock (TIME_ZONE), not the UTC server's
+  const startOfToday = startOfZonedDay(now).getTime();
   const endOfToday = startOfToday + 24 * 60 * 60 * 1000 - 1;
 
   it('returns `count` dates, sorted ascending, inside [now-daysBack, now+daysForward]', () => {
@@ -150,6 +149,22 @@ describe('scheduleSeries — forward-dated events never leave "today" empty', ()
       const dates = scheduleSeries(new SeededRandom(`t${count}`), count, { now });
       const today = dates.filter((d) => d.getTime() >= startOfToday && d.getTime() <= endOfToday);
       expect(today.length).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('the today row is in business hours on the business clock, on a UTC server', () => {
+    const prev = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      for (const tz of ['America/Chicago', 'Asia/Kolkata', 'Europe/London']) {
+        const [first] = scheduleSeries(new SeededRandom(`zone-${tz}`), 1, { now, timeZone: tz });
+        const h = zoned(first!, tz).getHours();
+        expect(h).toBeGreaterThanOrEqual(8);
+        expect(h).toBeLessThanOrEqual(17);
+        expect(zoned(first!, tz).getDate()).toBe(zoned(now, tz).getDate());
+      }
+    } finally {
+      process.env.TZ = prev;
     }
   });
 

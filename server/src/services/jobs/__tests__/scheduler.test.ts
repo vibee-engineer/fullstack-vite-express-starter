@@ -5,6 +5,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { atTime, zoned } from '@shared/time';
+
 import { msUntilDaily, Scheduler, type JobLogger } from '../scheduler';
 
 /** Drain the microtask queue so an already-started async fire settles. */
@@ -65,18 +67,32 @@ function spyLogger(): JobLogger & { infos: unknown[]; errors: unknown[] } {
 
 describe('msUntilDaily', () => {
   it('returns the delay to a later time the same day', () => {
-    const now = new Date(2026, 0, 1, 1, 0, 0); // 01:00
+    const now = atTime('2026-01-01', '01:00'); // 01:00 business time
     expect(msUntilDaily('03:00', now)).toBe(2 * 60 * 60 * 1000);
   });
 
   it('rolls to tomorrow when the time already passed today', () => {
-    const now = new Date(2026, 0, 1, 4, 0, 0); // 04:00
+    const now = atTime('2026-01-01', '04:00');
     expect(msUntilDaily('03:00', now)).toBe(23 * 60 * 60 * 1000);
   });
 
   it('treats the exact current minute as tomorrow (never a 0 delay loop)', () => {
-    const now = new Date(2026, 0, 1, 3, 0, 0, 0); // exactly 03:00:00.000
+    const now = atTime('2026-01-01', '03:00'); // exactly 03:00:00.000
     expect(msUntilDaily('03:00', now)).toBe(24 * 60 * 60 * 1000);
+  });
+
+  it('03:00 means 03:00 for the business, not the UTC server, across a DST night', () => {
+    const prev = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const tz = 'America/New_York';
+      const now = atTime('2026-11-01', '00:30', tz); // DST ends 02:00 that night
+      const next = new Date(now.getTime() + msUntilDaily('03:00', now, tz));
+      expect(zoned(next, tz).getHours()).toBe(3);
+      expect(msUntilDaily('03:00', now, tz)).toBe(3.5 * 60 * 60 * 1000); // 2.5h + the repeated hour
+    } finally {
+      process.env.TZ = prev;
+    }
   });
 
   it('rejects malformed or out-of-range times', () => {

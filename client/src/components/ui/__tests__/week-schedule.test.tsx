@@ -9,11 +9,16 @@
  */
 
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { atTime, TIME_ZONE } from '@shared/time';
 
 import { layoutDay, WeekSchedule, type ScheduleEvent } from '../week-schedule';
 
-const at = (h: number, m = 0, day = 6) => new Date(2026, 9, day, h, m);
+const pad = (n: number) => String(n).padStart(2, '0');
+// Times are on the business's clock (TIME_ZONE), the way an app builds them.
+const at = (h: number, m = 0, day = 6) =>
+  atTime(`2026-10-${pad(day)}T12:00:00Z`, `${pad(h)}:${pad(m)}`, TIME_ZONE);
 const ev = (id: string, s: Date, e: Date, extra: Partial<ScheduleEvent> = {}): ScheduleEvent => ({
   id,
   start: s,
@@ -85,8 +90,8 @@ describe('layoutDay', () => {
 });
 
 describe('<WeekSchedule />', () => {
-  const weekStart = new Date(2026, 9, 5); // Monday 5 October 2026
-  const now = new Date(2026, 9, 6, 12, 0);
+  const weekStart = at(0, 0, 5); // Monday 5 October 2026
+  const now = at(12, 0, 6);
 
   it('labels each chip with its full text and calls onEventClick', () => {
     const onEventClick = vi.fn();
@@ -185,5 +190,78 @@ describe('<WeekSchedule />', () => {
     render(<WeekSchedule weekStart={weekStart} days={5} events={[]} now={now} />);
     // each day appears once in the grid and once in the agenda
     expect(screen.getAllByRole('region', { name: /October/ })).toHaveLength(10);
+  });
+});
+
+// The bug this guards: a demo world built in the browser and seeded again from
+// the UTC server (phase 2) moved every class by the viewer's offset.
+describe('<WeekSchedule /> on the business clock', () => {
+  const ORIGINAL_TZ = process.env.TZ;
+  afterEach(() => {
+    process.env.TZ = ORIGINAL_TZ;
+  });
+  const studio = 'America/Chicago';
+  const sunrise = (): ScheduleEvent => ({
+    id: 'sunrise',
+    start: atTime('2026-10-22T12:00:00Z', '06:30', studio),
+    end: atTime('2026-10-22T12:00:00Z', '07:30', studio),
+    title: 'Sunrise Flow',
+  });
+
+  for (const viewer of ['Asia/Kolkata', 'UTC', 'America/Los_Angeles']) {
+    it(`a 6:30 class in Austin reads 06:30 on Thursday for a viewer in ${viewer}`, () => {
+      process.env.TZ = viewer;
+      const weekStart = atTime('2026-10-19T12:00:00Z', '00:00', studio);
+      render(
+        <WeekSchedule
+          weekStart={weekStart}
+          events={[sunrise()]}
+          timeZone={studio}
+          now={atTime('2026-10-21T12:00:00Z', '09:00', studio)}
+        />,
+      );
+      // grid and phone agenda both render in jsdom; the class must sit on Thursday in each
+      const thursdays = screen.getAllByRole('region', { name: /thursday 22 october/i });
+      expect(thursdays.length).toBeGreaterThan(0);
+      for (const day of thursdays) {
+        expect(
+          within(day).getByRole('button', { name: /^06:30 to 07:30, Sunrise Flow/ }),
+        ).toBeTruthy();
+      }
+    });
+  }
+
+  it('the same instant from an ISO string lands on the same row', () => {
+    process.env.TZ = 'Asia/Kolkata';
+    const e = sunrise();
+    render(
+      <WeekSchedule
+        weekStart={atTime('2026-10-19T12:00:00Z', '00:00', studio)}
+        events={[
+          { ...e, start: (e.start as Date).toISOString(), end: (e.end as Date).toISOString() },
+        ]}
+        timeZone={studio}
+        now={atTime('2026-10-21T12:00:00Z', '09:00', studio)}
+      />,
+    );
+    expect(
+      screen.getAllByRole('button', { name: /^06:30 to 07:30, Sunrise Flow/ }).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('timeZone={null} keeps the viewer clock', () => {
+    process.env.TZ = 'Asia/Kolkata';
+    const e = sunrise(); // 11:30 UTC = 17:00 in Kolkata
+    render(
+      <WeekSchedule
+        weekStart={new Date(2026, 9, 19)}
+        events={[e]}
+        timeZone={null}
+        now={new Date(2026, 9, 21, 9)}
+      />,
+    );
+    expect(
+      screen.getAllByRole('button', { name: /^17:00 to 18:00, Sunrise Flow/ }).length,
+    ).toBeGreaterThan(0);
   });
 });

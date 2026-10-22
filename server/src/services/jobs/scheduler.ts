@@ -20,6 +20,8 @@
  * and assert exact tick behavior without waiting on wall-clock time.
  */
 
+import { atTime, TIME_ZONE, zoned } from '@shared/time';
+
 export type JobHandler = () => void | Promise<void>;
 
 /** Minimal logger shape — the app's pino logger satisfies it; tests pass a spy. */
@@ -39,7 +41,7 @@ export interface IntervalJob {
 
 export interface DailyJob {
   name: string;
-  /** 24h local time "HH:MM", e.g. "03:00". */
+  /** 24h "HH:MM" on the business's clock (TIME_ZONE from @shared/time), e.g. "03:00". */
   dailyAt: string;
   handler: JobHandler;
 }
@@ -49,19 +51,24 @@ export type JobSpec = IntervalJob | DailyJob;
 const isDaily = (job: JobSpec): job is DailyJob => 'dailyAt' in job;
 
 /**
- * Milliseconds from `now` until the next local `HH:MM`. If that time already
- * passed today, returns the delay to tomorrow's occurrence. Exported for tests.
+ * Milliseconds from `now` until the next `HH:MM` on the business's clock (the
+ * server's own clock is UTC). If that time already passed today, returns the
+ * delay to tomorrow's occurrence. Exported for tests.
  */
-export function msUntilDaily(hhmm: string, now: Date): number {
+export function msUntilDaily(hhmm: string, now: Date, timeZone: string = TIME_ZONE): number {
   const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
   if (!match) throw new Error(`Invalid dailyAt "${hhmm}" — expected "HH:MM".`);
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
   if (hours > 23 || minutes > 59) throw new Error(`Invalid dailyAt "${hhmm}" — out of range.`);
 
-  const next = new Date(now);
-  next.setHours(hours, minutes, 0, 0);
-  if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 1);
+  const at = `${hours}:${String(minutes).padStart(2, '0')}`;
+  let next = atTime(now, at, timeZone);
+  if (next.getTime() <= now.getTime()) {
+    const tomorrow = zoned(now, timeZone); // a calendar day in the zone, not +24h
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    next = atTime(tomorrow, at, timeZone);
+  }
   return next.getTime() - now.getTime();
 }
 

@@ -118,12 +118,20 @@ export function formatCurrency(n: number, currency = 'USD', locale = 'en-US'): s
   }).format(n);
 }
 
+/** `percent` takes a 0-1 fraction, like Intl: 0.42 → "42%", 1.1 → "110%". */
 type ValueFormat = 'currency' | 'number' | 'percent';
+
+export function formatPercent(n: number, compact = false): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'percent',
+    maximumFractionDigits: compact ? 0 : 1,
+  }).format(n);
+}
 
 function formatterFor(fmt: ValueFormat, compact: boolean, currency = 'USD') {
   return (n: number) => {
     if (n == null || Number.isNaN(n)) return '';
-    if (fmt === 'percent') return `${n.toFixed(1)}%`;
+    if (fmt === 'percent') return formatPercent(n, compact);
     if (fmt === 'currency')
       return compact ? formatCompactCurrency(n, currency) : formatCurrency(n, currency);
     return compact ? formatCompactNumber(n) : new Intl.NumberFormat('en-US').format(n);
@@ -203,9 +211,10 @@ export function Chart({
   data: ChartDatum[];
   /** key on each datum for the x axis (e.g. 'month', 'date') */
   xKey: string;
-  /** one or more series keys to plot (first is the primary accent) */
+  /** one or more series keys to plot (first is the primary accent); any field name works */
   series: string | string[];
   type?: 'area' | 'line' | 'bar';
+  /** 'percent' takes 0-1 fractions (held / capacity), not 0-100 */
   valueFormat?: ValueFormat;
   currency?: string;
   /** format an x tick / tooltip heading (e.g. a date) */
@@ -227,6 +236,35 @@ export function Chart({
   const valueFmt = formatterFor(valueFormat, false, currency);
   const axisFmt = formatterFor(valueFormat, true, currency);
 
+  // recharts copies every field of a datum onto the mark it draws, so a series
+  // named `fill`, `stroke` or `radius` repaints its own bars (fill: 0.79 draws
+  // black). Plot through private keys; field names stay the caller's business.
+  const plotted = useMemo(
+    () =>
+      (data ?? []).map((d) => {
+        const row: Record<string, string | number | null> = { __x: d[xKey] ?? null };
+        keys.forEach((k, i) => (row[`__s${i}`] = d[k] ?? null));
+        return row;
+      }),
+    [data, xKey, keys],
+  );
+
+  // A 0-100 series under 'percent' reads 7900%; say so where the pre-finish
+  // console scan sees it.
+  useEffect(() => {
+    if (!import.meta.env.DEV || valueFormat !== 'percent') return;
+    const max = Math.max(
+      0,
+      ...plotted.flatMap((r) => keys.map((_, i) => Math.abs(Number(r[`__s${i}`]) || 0))),
+    );
+    if (max > 2) {
+      console.error(
+        `[Chart] valueFormat "percent" takes a 0-1 fraction (0.42 → 42%), but a value is ${max}. ` +
+          'Pass the ratio (held / capacity), not the ratio × 100.',
+      );
+    }
+  }, [plotted, keys, valueFormat]);
+
   // True empty state — never a bare axis frame; render a calm message at height.
   if (!data?.length) {
     return (
@@ -245,7 +283,7 @@ export function Chart({
     stroke: tokens['--border'],
   } as const;
   const xAxisProps = {
-    dataKey: xKey,
+    dataKey: '__x',
     axisLine: false,
     tickLine: false,
     minTickGap: 32,
@@ -281,17 +319,23 @@ export function Chart({
     <div className={className}>
       <ResponsiveContainer width="100%" height={height}>
         {type === 'bar' ? (
-          <BarChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <BarChart data={plotted} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
             {tooltip}
             {keys.map((k, i) => (
-              <Bar key={k} dataKey={k} fill={accents[i % accents.length]} radius={[4, 4, 0, 0]} />
+              <Bar
+                key={k}
+                dataKey={`__s${i}`}
+                name={k}
+                fill={accents[i % accents.length]}
+                radius={[4, 4, 0, 0]}
+              />
             ))}
           </BarChart>
         ) : type === 'line' ? (
-          <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <LineChart data={plotted} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid {...gridProps} />
             <XAxis {...xAxisProps} />
             <YAxis {...yAxisProps} />
@@ -300,7 +344,8 @@ export function Chart({
               <Line
                 key={k}
                 type="monotone"
-                dataKey={k}
+                dataKey={`__s${i}`}
+                name={k}
                 stroke={accents[i % accents.length]}
                 strokeWidth={2}
                 dot={false}
@@ -317,7 +362,7 @@ export function Chart({
             ))}
           </LineChart>
         ) : (
-          <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+          <AreaChart data={plotted} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <defs>
               {keys.map((k, i) => (
                 <linearGradient key={k} id={`${gradId}-${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -334,7 +379,8 @@ export function Chart({
               <Area
                 key={k}
                 type="monotone"
-                dataKey={k}
+                dataKey={`__s${i}`}
+                name={k}
                 stroke={accents[i % accents.length]}
                 strokeWidth={2}
                 fill={`url(#${gradId}-${i})`}
