@@ -26,7 +26,7 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 space-y-1">
-        <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
+        <h1 className="text-balance break-words text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1>
         {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
       </div>
       {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
